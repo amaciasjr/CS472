@@ -1,4 +1,5 @@
 import numpy as np
+import arff
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 ### NOTE: The only methods you are required to have are:
@@ -22,6 +23,7 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
         """
         self.lr = lr
         self.shuffle = shuffle
+        self.weights = None
 
     def fit(self, X, y, initial_weights=None):
         """ Fit the data; run the algorithm and adjust the weights to find a good solution
@@ -57,6 +59,7 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
         Returns:
 
         """
+        bias = 0
 
         return [0]
 
@@ -83,4 +86,26 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
     ### Not required by sk-learn but required by us for grading. Returns the weights.
     def get_weights(self):
-        pass
+        return self.weights
+
+### Load Data from *.arff file.
+arff_path = "linearlySeparable.arff"
+linSepData = arff.Arff(arff=arff_path, label_count=1)
+
+# Pull out features and targets from *.arff. Use '.data' of get_labels() and to convert 'arff.Arff' object to numpy.ndarray
+# object.
+features = linSepData.get_features().data
+print(features)
+print(type(features))
+
+targets = linSepData.get_labels().data
+print(targets)
+
+# Initialize learningRate, shuffle, and inital_weight values.
+learningRate = 0.1
+shuffle = True
+initial_weights = None
+
+
+perceptron = PerceptronClassifier(learningRate, shuffle)
+perceptron.fit(features,targets)
