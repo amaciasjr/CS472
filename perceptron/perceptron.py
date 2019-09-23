@@ -37,9 +37,28 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
             self: this allows this to be chained, e.g. model.fit(X,y).predict(X_test)
 
         """
-        self.initial_weights = self.initialize_weights() if not initial_weights else initial_weights
+        numFeatures = X.shape[1]
+
+        self.initial_weights = self.initialize_weights(numFeatures) if not initial_weights else initial_weights
+
+        bias = np.ones(1)
+        index = 0
+        for row in X:
+            pattern = np.append(row, bias)
+            temp = np.multiply(pattern, self.initial_weights)
+            net = np.sum(temp)
+            output = 0
+            if net > 0:
+                output = 1
+
+            # self.deltaWeights()
+            index += 1
+
 
         return self
+
+    def deltaWeights(self, target, output, pattern ):
+        print("Delta Weights")
 
     def predict(self, X):
         """ Predict all classes for a dataset X
@@ -53,15 +72,16 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
         """
         pass
 
-    def initialize_weights(self):
+    def initialize_weights(self, numFeatures):
         """ Initialize weights for perceptron. Don't forget the bias!
 
         Returns:
 
         """
-        bias = 0
+        bias = 1
+        weights = np.zeros(numFeatures+bias)
+        return weights
 
-        return [0]
 
     def score(self, X, y):
         """ Return accuracy of model on a given dataset. Must implement own score function.
@@ -95,11 +115,7 @@ linSepData = arff.Arff(arff=arff_path, label_count=1)
 # Pull out features and targets from *.arff. Use '.data' of get_labels() and to convert 'arff.Arff' object to numpy.ndarray
 # object.
 features = linSepData.get_features().data
-print(features)
-print(type(features))
-
 targets = linSepData.get_labels().data
-print(targets)
 
 # Initialize learningRate, shuffle, and inital_weight values.
 learningRate = 0.1
