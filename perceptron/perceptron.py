@@ -137,6 +137,7 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
             if predictions[index] == target:
                 correct_guesses += 1
 
+            index += 1
 
         return correct_guesses/len(y)
 
@@ -196,8 +197,17 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
         return output
 
 
+# IMPORT DATA from *.arff file(s).
+mat = arff.Arff(arff="linsep2nonorigin.arff", label_count=1)
+data = mat.data[:,0:-1]
+labels = mat.data[:,-1].reshape(-1,1)
+PClass = PerceptronClassifier(lr=0.1,shuffle=False,deterministic=10)
+PClass.fit(data,labels)
+Accuracy = PClass.score(data,labels)
+print("Accuray = [{:.2f}]".format(Accuracy))
+print("Final Weights =",PClass.get_weights())
 
-### Load Data from *.arff file(s).
+### Load DEBUG Data from *.arff file(s).
 # arff_path1 = "linearlySeparable.arff"
 # linSepTrainData = arff.Arff(arff=arff_path1, label_count=1)
 #
@@ -211,13 +221,3 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 #
 # test_features = linSepTestData.get_features().data
 # test_targets = linSepTestData.get_labels().data
-
-# IMPORT DATA from *.arff file(s).
-mat = arff.Arff(arff="linsep2nonorigin.arff", label_count=1)
-data = mat.data[:,0:-1]
-labels = mat.data[:,-1].reshape(-1,1)
-PClass = PerceptronClassifier(lr=0.1,shuffle=False,deterministic=10)
-PClass.fit(data,labels)
-Accuracy = PClass.score(data,labels)
-print("Accuray = [{:.2f}]".format(Accuracy))
-print("Final Weights =",PClass.get_weights())
