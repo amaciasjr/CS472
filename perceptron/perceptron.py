@@ -65,7 +65,18 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
             array, shape (n_samples,)
                 Predicted target values per element in X.
         """
-        pass
+        predicted_targets = np.zeros(len(X))
+        bias = np.ones(1)
+        index = 0
+        for row in X:
+            pattern = np.append(row, bias)
+            output = self.findOutput(pattern)
+
+            predicted_targets[index] = output
+            index += 1
+
+        print(f"Predicted Targets after Predict: {predicted_targets}")
+        return predicted_targets
 
     def initialize_weights(self, numFeatures):
         """ Initialize weights for perceptron. Don't forget the bias!
@@ -89,28 +100,67 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
             score : float
                 Mean accuracy of self.predict(X) wrt. y.
         """
+        predictions = self.predict(X)
 
-        return 0
+        index = 0
+        correct_guesses = 0
+        for target in y:
+
+            if predictions[index] == target:
+                correct_guesses += 1
+
+        return correct_guesses/len(y)
 
     def _shuffle_data(self, X, y):
         """ Shuffle the data! This _ prefix suggests that this method should only be called internally.
             It might be easier to concatenate X & y and shuffle a single 2D array, rather than
              shuffling X and y exactly the same way, independently.
         """
+
         pass
 
     ### Not required by sk-learn but required by us for grading. Returns the weights.
     def get_weights(self):
         return self.weights
 
-### Load Data from *.arff file.
-arff_path = "linearlySeparable.arff"
-linSepData = arff.Arff(arff=arff_path, label_count=1)
+    ### Helper Functions
+    def deltaWeights(self, target, output, pattern ):
+
+        new_weights = np.zeros(len(pattern))
+
+        ele_index = 0
+        for element in pattern:
+            curr_weight_val = self.lr * ( target - output ) * element
+            new_weights[ele_index] = curr_weight_val
+            ele_index += 1
+
+        return new_weights
+
+    def findOutput(self, pattern):
+
+        temp = np.multiply(pattern, self.weights)
+        net = np.sum(temp)
+        output = 0
+
+        if net > 0:
+            output = 1
+
+        return output
+
+### Load Data from *.arff file(s).
+arff_path1 = "linearlySeparable.arff"
+linSepTrainData = arff.Arff(arff=arff_path1, label_count=1)
+
+arff_path2 = "linearlySeparableTest.arff"
+linSepTestData = arff.Arff(arff=arff_path2, label_count=1)
 
 # Pull out features and targets from *.arff. Use '.data' of get_labels() and to convert 'arff.Arff' object to numpy.ndarray
 # object.
-features = linSepData.get_features().data
-targets = linSepData.get_labels().data
+training_features = linSepTrainData.get_features().data
+training_targets = linSepTrainData.get_labels().data
+
+test_features = linSepTestData.get_features().data
+test_targets = linSepTestData.get_labels().data
 
 # Initialize learningRate, shuffle, and inital_weight values.
 learningRate = 0.1
@@ -119,4 +169,9 @@ initial_weights = None
 
 # Initialize perceptron
 perceptron = PerceptronClassifier(learningRate, shuffle)
-perceptron.fit(features,targets)
+
+#
+perceptron.fit(training_features,training_targets).predict(test_features)
+
+accuracy = perceptron.score(test_features,test_targets)
+print("Accuray = [{:.2f}]".format(accuracy))
