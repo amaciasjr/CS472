@@ -14,16 +14,22 @@ from sklearn.linear_model import Perceptron
 
 class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
-    def __init__(self, lr=.1, shuffle=True):
+    def __init__(self, lr=.1, shuffle=True, deterministic=1):
         """ Initialize class with chosen hyperparameters.
 
         Args:
             lr (float): A learning rate / step size.
             shuffle: Whether to shuffle the training data each epoch. DO NOT SHUFFLE for evaluation / debug datasets.
+            weights: Store the final weights after the Preceptron Trains. Used in get_weights() method.
+            deterministic: # of epochs used to train Perceptron.
         """
         self.lr = lr
         self.shuffle = shuffle
         self.weights = None
+        self.deterministic = deterministic
+        self.features = None
+        self.targets = None
+        self.accuracy = 0.01
 
     def fit(self, X, y, initial_weights=None):
         """ Fit the data; run the algorithm and adjust the weights to find a good solution
@@ -41,18 +47,41 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
         self.initial_weights = self.initialize_weights(numFeatures) if not initial_weights else initial_weights
         self.weights = self.initial_weights
+        self.targets = y
+        self.features = X
 
+        insignificant_improvement_counter = 0
+        three_epochs = 3
         bias = np.ones(1)
-        index = 0
-        for row in X:
-            pattern = np.append(row, bias)
-            output = self.findOutput(pattern)
+        epoch = 0
 
-            new_weights = self.deltaWeights(y[index], output, pattern)
-            self.weights = np.add(self.weights, new_weights)
-            index += 1
+        while epoch < self.deterministic:
+            index = 0
+            for row in self.features:
+                pattern = np.append(row, bias)
+                output = self.findOutput(pattern)
 
-        print(f"Final Weights after Fit: {self.weights}")
+                new_weights = self.deltaWeights(self.targets[index], output, pattern)
+                self.weights = np.add(self.weights, new_weights)
+                index += 1
+
+            # STOPPING CRITERIA
+            # if  self.score(self.features, self.targets) > 85:
+            #
+            #     insignificant_improvement_counter += 1
+            #
+            #     if insignificant_improvement_counter == three_epochs:
+            #         print(f"Stopped Training after {epoch} epochs.")
+            #         return self
+
+
+
+            if self.shuffle == True:
+                self._shuffle_data(self.features,self.targets)
+
+
+            epoch += 1
+
         return self
 
     def predict(self, X):
@@ -75,7 +104,6 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
             predicted_targets[index] = output
             index += 1
 
-        print(f"Predicted Targets after Predict: {predicted_targets}")
         return predicted_targets
 
     def initialize_weights(self, numFeatures):
@@ -109,6 +137,7 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
             if predictions[index] == target:
                 correct_guesses += 1
 
+
         return correct_guesses/len(y)
 
     def _shuffle_data(self, X, y):
@@ -116,7 +145,26 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
             It might be easier to concatenate X & y and shuffle a single 2D array, rather than
              shuffling X and y exactly the same way, independently.
         """
+        full_rows = np.hstack((X,y))
+        np.random.shuffle(full_rows)
 
+        columns = full_rows.shape[1]
+        last_col = columns - 1
+        first_col = 0
+        new_targets = None
+        new_features = None
+
+        for column in range(0,columns):
+
+            if column == first_col:
+                new_features = np.hsplit(full_rows,columns)[first_col]
+            elif column == last_col:
+                new_targets = np.hsplit(full_rows,columns)[last_col]
+            else:
+                new_features = np.hstack((new_features,np.hsplit(full_rows,columns)[column]))
+
+        self.features = new_features
+        self.targets = new_targets
         pass
 
     ### Not required by sk-learn but required by us for grading. Returns the weights.
@@ -147,31 +195,29 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
         return output
 
-### Load Data from *.arff file(s).
-arff_path1 = "linearlySeparable.arff"
-linSepTrainData = arff.Arff(arff=arff_path1, label_count=1)
 
-arff_path2 = "linearlySeparableTest.arff"
-linSepTestData = arff.Arff(arff=arff_path2, label_count=1)
+
+### Load Data from *.arff file(s).
+# arff_path1 = "linearlySeparable.arff"
+# linSepTrainData = arff.Arff(arff=arff_path1, label_count=1)
+#
+# arff_path2 = "linearlySeparableTest.arff"
+# linSepTestData = arff.Arff(arff=arff_path2, label_count=1)
 
 # Pull out features and targets from *.arff. Use '.data' of get_labels() and to convert 'arff.Arff' object to numpy.ndarray
 # object.
-training_features = linSepTrainData.get_features().data
-training_targets = linSepTrainData.get_labels().data
-
-test_features = linSepTestData.get_features().data
-test_targets = linSepTestData.get_labels().data
-
-# Initialize learningRate, shuffle, and inital_weight values.
-learningRate = 0.1
-shuffle = True
-initial_weights = None
-
-# Initialize perceptron
-perceptron = PerceptronClassifier(learningRate, shuffle)
-
+# training_features = linSepTrainData.get_features().data
+# training_targets = linSepTrainData.get_labels().data
 #
-perceptron.fit(training_features,training_targets).predict(test_features)
+# test_features = linSepTestData.get_features().data
+# test_targets = linSepTestData.get_labels().data
 
-accuracy = perceptron.score(test_features,test_targets)
-print("Accuray = [{:.2f}]".format(accuracy))
+# IMPORT DATA from *.arff file(s).
+mat = arff.Arff(arff="linsep2nonorigin.arff", label_count=1)
+data = mat.data[:,0:-1]
+labels = mat.data[:,-1].reshape(-1,1)
+PClass = PerceptronClassifier(lr=0.1,shuffle=False,deterministic=10)
+PClass.fit(data,labels)
+Accuracy = PClass.score(data,labels)
+print("Accuray = [{:.2f}]".format(Accuracy))
+print("Final Weights =",PClass.get_weights())
