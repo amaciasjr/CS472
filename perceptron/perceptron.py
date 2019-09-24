@@ -40,25 +40,20 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
         numFeatures = X.shape[1]
 
         self.initial_weights = self.initialize_weights(numFeatures) if not initial_weights else initial_weights
+        self.weights = self.initial_weights
 
         bias = np.ones(1)
         index = 0
         for row in X:
             pattern = np.append(row, bias)
-            temp = np.multiply(pattern, self.initial_weights)
-            net = np.sum(temp)
-            output = 0
-            if net > 0:
-                output = 1
+            output = self.findOutput(pattern)
 
-            # self.deltaWeights()
+            new_weights = self.deltaWeights(y[index], output, pattern)
+            self.weights = np.add(self.weights, new_weights)
             index += 1
 
-
+        print(f"Final Weights after Fit: {self.weights}")
         return self
-
-    def deltaWeights(self, target, output, pattern ):
-        print("Delta Weights")
 
     def predict(self, X):
         """ Predict all classes for a dataset X
@@ -122,6 +117,6 @@ learningRate = 0.1
 shuffle = True
 initial_weights = None
 
-
+# Initialize perceptron
 perceptron = PerceptronClassifier(learningRate, shuffle)
 perceptron.fit(features,targets)
