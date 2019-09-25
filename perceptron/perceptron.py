@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import arff
 from sklearn.base import BaseEstimator, ClassifierMixin
 
@@ -14,7 +15,7 @@ from sklearn.linear_model import Perceptron
 
 class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
-    def __init__(self, lr=.1, shuffle=True, deterministic=1):
+    def __init__(self, lr=.1, shuffle=True, deterministic=np.inf):
         """ Initialize class with chosen hyperparameters.
 
         Args:
@@ -51,10 +52,10 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
         self.features = X
 
         insignificant_improvement_counter = 0
-        three_epochs = 3
+        consecutive_epochs = 5
         bias = np.ones(1)
         epoch = 0
-
+        max_accuracy = self.accuracy
         while epoch < self.deterministic:
             index = 0
             for row in self.features:
@@ -65,20 +66,20 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
                 self.weights = np.add(self.weights, new_weights)
                 index += 1
 
-            # STOPPING CRITERIA
-            # if  self.score(self.features, self.targets) > 85:
-            #
-            #     insignificant_improvement_counter += 1
-            #
-            #     if insignificant_improvement_counter == three_epochs:
-            #         print(f"Stopped Training after {epoch} epochs.")
-            #         return self
-
-
-
             if self.shuffle == True:
                 self._shuffle_data(self.features,self.targets)
 
+            # STOPPING CRITERIA
+            current_accuracy = self.score(self.features, self.targets)
+            if max_accuracy >= current_accuracy:
+                insignificant_improvement_counter += 1
+
+                if insignificant_improvement_counter == consecutive_epochs:
+                    print(f"Stopped Training after {epoch} epochs.")
+                    return self
+            else:
+                max_accuracy = current_accuracy
+                insignificant_improvement_counter = 0
 
             epoch += 1
 
@@ -196,12 +197,26 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
         return output
 
+    def splitData(self, X, y):
+
+        self._shuffle_data(X, y)
+
+        seventyPercent = math.floor(X.shape[0] * .7)
+
+        training_set = X[0:seventyPercent]
+        training_labels = y[0:seventyPercent]
+        test_set = X[seventyPercent:]
+        test_labels = y[seventyPercent:]
+
+        return training_set,test_set,training_labels,test_labels
+
 
 # IMPORT DATA from *.arff file(s).
-mat = arff.Arff(arff="linsep2nonorigin.arff", label_count=1)
+mat = arff.Arff(arff="data_banknote_authentication.arff", label_count=1)
 data = mat.data[:,0:-1]
 labels = mat.data[:,-1].reshape(-1,1)
-PClass = PerceptronClassifier(lr=0.1,shuffle=False,deterministic=10)
+PClass = PerceptronClassifier(lr=0.1,shuffle=False)
+trainingSet, testSet, trainingLabels, testLabels = PClass.splitData(data, labels)
 PClass.fit(data,labels)
 Accuracy = PClass.score(data,labels)
 print("Accuray = [{:.2f}]".format(Accuracy))
