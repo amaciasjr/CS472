@@ -1,5 +1,8 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
+import math
+
+
 
 ### NOTE: The only methods you are required to have are:
 #   * predict
@@ -22,7 +25,7 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         Example:
             mlp = MLPClassifier([3,3]),  <--- this will create a model with two hidden layers, both 3 nodes wide
         """
-        self.hidden_layer_widths
+        self.hidden_layer_widths = hidden_layer_widths
         self.lr = lr
         self.momentum = momentum
         self.shuffle = shuffle
@@ -89,3 +92,16 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
     ### Not required by sk-learn but required by us for grading. Returns the weights.
     def get_weights(self):
         pass
+
+    ### Helper functions
+    def calculate_loss(self, actual_output, predicted_output):
+        return (actual_output - predicted_output) ** 2
+
+    def calculate_node_activation(self, net_value):
+        return 1/(1 + math.exp( -net_value ))
+
+    def calculate_activation_derivative(self, net_value):
+        return self.calculate_activation_derivative(net_value) * (1 - self.calculate_activation_derivative(net_value))
+
+
+mlp = MLPClassifier([3,3]) # This will create a model with two hidden layers, both 3 nodes wide
