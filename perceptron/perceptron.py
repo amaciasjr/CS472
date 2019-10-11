@@ -1,7 +1,9 @@
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 import arff
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.linear_model import Perceptron
 
 ### NOTE: The only methods you are required to have are:
 #   * predict
@@ -11,7 +13,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 #   They must take at least the parameters below, exactly as specified. The output of
 #   get_weights must be in the same format as the example provided.
 
-from sklearn.linear_model import Perceptron
+
 
 class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
@@ -201,38 +203,59 @@ class PerceptronClassifier(BaseEstimator,ClassifierMixin):
 
         self._shuffle_data(X, y)
 
-        seventyPercent = math.floor(X.shape[0] * .7)
+        seventyPercent = math.floor(self.features.shape[0] * .7)
 
-        training_set = X[0:seventyPercent]
-        training_labels = y[0:seventyPercent]
-        test_set = X[seventyPercent:]
-        test_labels = y[seventyPercent:]
+        training_set = self.features[0:seventyPercent]
+        training_labels = self.targets[0:seventyPercent]
+        test_set = self.features[seventyPercent:]
+        test_labels = self.targets[seventyPercent:]
 
         return training_set,test_set,training_labels,test_labels
 
 
 # IMPORT DATA from *.arff file(s).
-mat = arff.Arff(arff="data_banknote_authentication.arff", label_count=1)
+mat = arff.Arff(arff="lab1Voting.arff", label_count=1)
 data = mat.data[:,0:-1]
 labels = mat.data[:,-1].reshape(-1,1)
-PClass = PerceptronClassifier(lr=0.1,shuffle=False)
+PClass = PerceptronClassifier(lr=1,shuffle=False)
 trainingSet, testSet, trainingLabels, testLabels = PClass.splitData(data, labels)
-PClass.fit(data,labels)
-Accuracy = PClass.score(data,labels)
-print("Accuray = [{:.2f}]".format(Accuracy))
+PClass.fit(trainingSet,trainingLabels)
+training_accuracy = PClass.score(trainingSet,trainingLabels)
+test_accuracy = PClass.score(testSet,testLabels)
+print("My Perceptron's Results")
+print("Training Accuray = [{:.2f}]".format(training_accuracy))
+print("Test Accuray = [{:.2f}]".format(test_accuracy))
 print("Final Weights =",PClass.get_weights())
 
-### Load DEBUG Data from *.arff file(s).
-# arff_path1 = "linearlySeparable.arff"
-# linSepTrainData = arff.Arff(arff=arff_path1, label_count=1)
-#
-# arff_path2 = "linearlySeparableTest.arff"
-# linSepTestData = arff.Arff(arff=arff_path2, label_count=1)
+from sklearn.datasets import load_digits
+from sklearn.linear_model import Perceptron
+X, y = load_digits(return_X_y=True)
+clf = Perceptron(tol=0.001, random_state=3, validation_fraction=0.9, early_stopping=True, warm_start=True)
+clf.fit(trainingSet, trainingLabels.ravel())
+print(clf)
+print(clf.score(testSet, testLabels.ravel()) )
+# PClass = PerceptronClassifier(lr=1,shuffle=False)
+# trainingSet, testSet, trainingLabels, testLabels = PClass.splitData(X, y)
+# PClass.fit(trainingSet,trainingLabels)
+# training_accuracy = PClass.score(trainingSet,trainingLabels)
+# test_accuracy = PClass.score(testSet,testLabels)
 
-# Pull out features and targets from *.arff. Use '.data' of get_labels() and to convert 'arff.Arff' object to numpy.ndarray
-# object.
-# training_features = linSepTrainData.get_features().data
-# training_targets = linSepTrainData.get_labels().data
+
+## Graph using matplotlib
+# x = np.linspace(-1, 1, 100)
+# f1 = np.hsplit(data,2)[0]
+# f2 = np.hsplit(data,2)[1]
 #
-# test_features = linSepTestData.get_features().data
-# test_targets = linSepTestData.get_labels().data
+# index = 0
+# for label in labels:
+#     if label == 0:
+#         plt.scatter(data[index][0], data[index][1], c="blue", label="Class 2" )
+#     else:
+#         plt.scatter(data[index][0], data[index][1], c="red", label="Class 1")
+#     index += 1
+#
+# plt.xlabel('Feature 1')
+# plt.ylabel('Feature 2')
+# plt.title("Non-linearly Separable Dataset")
+# plt.legend()
+# plt.show()
