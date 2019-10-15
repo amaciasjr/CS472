@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 import math
-
+from arff import Arff
 
 
 ### NOTE: The only methods you are required to have are:
@@ -30,6 +30,7 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         self.momentum = momentum
         self.shuffle = shuffle
         self.weights = None
+        self.deltaWeights = None
         self.deterministic = deterministic
         self.features = None
         self.targets = None
@@ -49,45 +50,54 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
             self: this allows this to be chained, e.g. model.fit(X,y).predict(X_test)
 
         """
-        numFeatures = X.shape[1]
-        self.numFeatures = numFeatures
-
         self.initial_weights = self.initialize_weights() if not initial_weights else initial_weights
         self.weights = self.initial_weights
         self.targets = y
         self.features = X
 
-        insignificant_improvement_counter = 0
-        consecutive_epochs = 5
-        bias = np.ones(1)
-        epoch = 0
-        max_accuracy = self.accuracy
-        while epoch < self.deterministic:
-            index = 0
-            for row in self.features:
-                pattern = np.append(row, bias)
-                output = self.findOutput(pattern)
+        layer = 0
+        bias_node = [1]
+        pattern = np.append(X, bias_node)
+        outputs = self.getLayerOutputs(pattern, layer)
+        layer += 1
 
-                new_weights = self.deltaWeights(self.targets[index], output, pattern)
-                self.weights = np.add(self.weights, new_weights)
-                index += 1
+        pattern = np.append(outputs, bias_node)
+        outputs.append(self.getLayerOutputs(pattern, layer))
 
-            if self.shuffle == True:
-                self._shuffle_data(self.features, self.targets)
+        errors = []
 
-            # STOPPING CRITERIA
-            current_accuracy = self.score(self.features, self.targets)
-            if max_accuracy >= current_accuracy:
-                insignificant_improvement_counter += 1
 
-                if insignificant_improvement_counter == consecutive_epochs:
-                    print(f"Stopped Training after {epoch} epochs.")
-                    return self
-            else:
-                max_accuracy = current_accuracy
-                insignificant_improvement_counter = 0
+        # insignificant_improvement_counter = 0
+        # consecutive_epochs = 5
+        # bias = np.ones(1)
+        # epoch = 0
+        # max_accuracy = self.accuracy
+        # while epoch < self.deterministic:
+        #     index = 0
+        #     for row in self.features:
+        #         pattern = np.append(row, bias)
+        #         output = self.findOutput(pattern)
+        #
+        #         new_weights = self.deltaWeights(self.targets[index], output, pattern)
+        #         self.weights = np.add(self.weights, new_weights)
+        #         index += 1
+        #
+        #     if self.shuffle == True:
+        #         self._shuffle_data(self.features, self.targets)
 
-            epoch += 1
+            # # STOPPING CRITERIA
+            # current_accuracy = self.score(self.features, self.targets)
+            # if max_accuracy >= current_accuracy:
+            #     insignificant_improvement_counter += 1
+            #
+            #     if insignificant_improvement_counter == consecutive_epochs:
+            #         print(f"Stopped Training after {epoch} epochs.")
+            #         return self
+            # else:
+            #     max_accuracy = current_accuracy
+            #     insignificant_improvement_counter = 0
+
+            # epoch += 1
 
         return self
 
@@ -106,7 +116,7 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         index = 0
         for row in X:
             pattern = np.append(row, bias)
-            output = self.findOutput(pattern)
+            output = self.getLayerOutputs(pattern)
 
             predicted_targets[index] = output
             index += 1
@@ -119,8 +129,16 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         Returns:
 
         """
-        bias = 1
-        weights = np.zeros(self.numFeatures + bias)
+        BIAS = 1
+        input_layer_nodes = hidden_layer_widths[0] + BIAS
+        hidden_layer_nodes = hidden_layer_widths[1] + BIAS
+        weights_between_in_and_hid = (input_layer_nodes, hidden_layer_widths[1])
+        weights_between_hid_and_out = (hidden_layer_nodes, hidden_layer_widths[2])
+
+        ### TODO: weights = [np.random.normal(size=weights_between_in_and_hid),np.random.normal(size=weights_between_hid_and_out)]
+
+        weights = [np.ones(weights_between_in_and_hid), np.ones(weights_between_hid_and_out)]
+        self.deltaWeights = [np.zeros(weights_between_in_and_hid), np.zeros(weights_between_hid_and_out)]
         return weights
 
     def score(self, X, y):
@@ -188,7 +206,7 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
     def calculate_activation_derivative(self, net_value):
         return self.calculate_activation_derivative(net_value) * (1 - self.calculate_activation_derivative(net_value))
 
-    def deltaWeights(self, target, output, pattern):
+    def updateWeights(self, target, output, pattern):
 
         new_weights = np.zeros(len(pattern))
 
@@ -200,29 +218,49 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
         return new_weights
 
-    def findOutput(self, pattern):
+    def getLayerOutputs(self, pattern, layer):
+        outputs = []
 
-        temp = np.multiply(pattern, self.weights)
-        net = np.sum(temp)
-        output = 0
+        for row in np.transpose(self.weights[layer]):
 
-        if net > 0:
-            output = 1
+            temp = np.multiply(pattern, row)
+            net = np.sum(temp)
+            output = self.calculate_node_activation(net)
+            outputs.append(output)
 
-        return output
+        return outputs
 
-    def splitData(self, X, y):
+    # def splitData(self, X, y):
+    #
+    #     self._shuffle_data(X, y)
+    #
+    #     seventyPercent = math.floor(self.features.shape[0] * .7)
+    #
+    #     training_set = self.features[0:seventyPercent]
+    #     training_labels = self.targets[0:seventyPercent]
+    #     test_set = self.features[seventyPercent:]
+    #     test_labels = self.targets[seventyPercent:]
+    #
+    #     return training_set, test_set, training_labels, test_labels
 
-        self._shuffle_data(X, y)
 
-        seventyPercent = math.floor(self.features.shape[0] * .7)
+# Testing with Homework Example
+input_layer_cnt = 2
+hidden_layer_cnt = 2
+output_layer_cnt = 1
+hidden_layer_widths = [input_layer_cnt, hidden_layer_cnt, output_layer_cnt]
+mlp = MLPClassifier(hidden_layer_widths)
 
-        training_set = self.features[0:seventyPercent]
-        training_labels = self.targets[0:seventyPercent]
-        test_set = self.features[seventyPercent:]
-        test_labels = self.targets[seventyPercent:]
+features = [0,1]
+np_features = np.asarray(features)
+classes = [0]
+np_classes = np.asarray(classes)
 
-        return training_set, test_set, training_labels, test_labels
+fit_result = mlp.fit(np_features, np_classes)
 
-
-mlp = MLPClassifier([3,3]) # This will create a model with two hidden layers, both 3 nodes wide
+# Testing with Debug Data
+# mat = Arff("linsep2nonorigin.arff")
+# data = mat.data[:,0:-1]
+# labels = mat.data[:,-1].reshape(-1,1)
+# MLPClass = MLPClassifier(LR=0.1,momentum=0.5,shuffle=False,deterministic=10)
+# MLPClass.fit(data,labels)
