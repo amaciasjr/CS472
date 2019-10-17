@@ -58,6 +58,7 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         self.initial_weights = self.initialize_weights() if not initial_weights else initial_weights
         self.weights = self.initial_weights
         layers_in_model = len(self.model)
+        last_hidden_layer = layers_in_model - 1
 
         # self.features = X
         # self.targets = y
@@ -67,19 +68,23 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
             for layer in range(layers_in_model):
 
                 bias_node = [1]
-
                 modified_observation = np.append(X[observation], bias_node)
-                self.model[layer] = np.add(modified_observation,self.model[layer])
+
+                if layer != last_hidden_layer:
+                    self.model[layer] = np.add(modified_observation,self.model[layer])
+
                 if layer > 0:
                     pattern = np.zeros(len(self.model[layer]))
-                    if 0 == layer:
-                        pattern = np.add(pattern,self.model[layer])
+                    previous_layer_num = layer - 1
+                    previous_layer = self.model[previous_layer_num]
+                    pattern = np.add(pattern, previous_layer)
+                    if layer != last_hidden_layer:
+                        self.get_layer_outputs(pattern, previous_layer_num)
                     else:
-                        previous_layer = layer - 1
-                        pattern = np.add(pattern, self.model[previous_layer])
+                        is_last_hidden_layer = True
+                        self.get_layer_outputs(pattern,previous_layer_num,is_last_hidden_layer)
 
-                    self.get_layer_outputs(pattern, layer)
-
+            print()
         # pattern = np.append(outputs, bias_node)
         # outputs.append(self.get_layer_outputs(pattern, layer))
 
@@ -219,19 +224,21 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
         return new_weights
 
-    def get_layer_outputs(self, pattern, layer):
+    def get_layer_outputs(self, pattern, previous_layer, is_last_hidden_layer = False):
 
-        node_in_layer = 0
+        BIAS_NODE = 1
+        if not is_last_hidden_layer:
+            nodes_in_layer = self.hidden_layers[1] - BIAS_NODE
+        else:
+            nodes_in_layer = self.output_layer_size
 
-        for row in np.transpose(self.weights[layer]):
-
-            temp = np.multiply(pattern, row)
+        for node_num in range(nodes_in_layer):
+            layer_weights = np.transpose(self.weights[previous_layer])
+            temp = np.multiply(pattern, layer_weights[node_num])
             net = np.sum(temp)
             output = self.calculate_node_activation(net)
-            self.model[layer][node_in_layer] = output
-            node_in_layer += 1
-
-        pass
+            current_layer = previous_layer + 1
+            self.model[current_layer][node_num] = output
 
     def create_model(self):
 
