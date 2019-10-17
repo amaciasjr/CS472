@@ -40,7 +40,7 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         self.input_layer_size = input_layer_nodes
         self.hidden_layers = hidden_layers
         self.output_layer_size = output_layer_nodes
-        self.model = self.create_model(input_layer_nodes, hidden_layers[0], hidden_layers[1], output_layer_nodes)
+        self.model = self.create_model()
 
 
     def fit(self, X, y, initial_weights=None):
@@ -57,55 +57,31 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         """
         self.initial_weights = self.initialize_weights() if not initial_weights else initial_weights
         self.weights = self.initial_weights
-
-        self.features = X
-        self.targets = y
-
         layers_in_model = len(self.model)
-        for layer in range(layers_in_model):
 
-            bias_node = [1]
-            pattern = np.append(X, bias_node)
-            outputs = self.get_layer_outputs(pattern, layer)
+        # self.features = X
+        # self.targets = y
+        observations = len(X)
+        for observation in range(observations):
 
+            for layer in range(layers_in_model):
 
-        pattern = np.append(outputs, bias_node)
-        outputs.append(self.get_layer_outputs(pattern, layer))
+                bias_node = [1]
 
-        errors = []
+                modified_observation = np.append(X[observation], bias_node)
+                self.model[layer] = np.add(modified_observation,self.model[layer])
+                if layer > 0:
+                    pattern = np.zeros(len(self.model[layer]))
+                    if 0 == layer:
+                        pattern = np.add(pattern,self.model[layer])
+                    else:
+                        previous_layer = layer - 1
+                        pattern = np.add(pattern, self.model[previous_layer])
 
+                    self.get_layer_outputs(pattern, layer)
 
-        # insignificant_improvement_counter = 0
-        # consecutive_epochs = 5
-        # bias = np.ones(1)
-        # epoch = 0
-        # max_accuracy = self.accuracy
-        # while epoch < self.deterministic:
-        #     index = 0
-        #     for row in self.features:
-        #         pattern = np.append(row, bias)
-        #         output = self.findOutput(pattern)
-        #
-        #         new_weights = self.deltaWeights(self.targets[index], output, pattern)
-        #         self.weights = np.add(self.weights, new_weights)
-        #         index += 1
-        #
-        #     if self.shuffle == True:
-        #         self._shuffle_data(self.features, self.targets)
-
-            # # STOPPING CRITERIA
-            # current_accuracy = self.score(self.features, self.targets)
-            # if max_accuracy >= current_accuracy:
-            #     insignificant_improvement_counter += 1
-            #
-            #     if insignificant_improvement_counter == consecutive_epochs:
-            #         print(f"Stopped Training after {epoch} epochs.")
-            #         return self
-            # else:
-            #     max_accuracy = current_accuracy
-            #     insignificant_improvement_counter = 0
-
-            # epoch += 1
+        # pattern = np.append(outputs, bias_node)
+        # outputs.append(self.get_layer_outputs(pattern, layer))
 
         return self
 
@@ -139,15 +115,12 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         """
         model_weights = []
         delta_weights = []
-        BIAS = 1
-        input_layer_nodes_plus_bias = self.input_layer_size + BIAS
-        hidden_layers_cnt = self.hidden_layers[0]
-        hidden_layer_nodes = self.hidden_layers[1]
-        hidden_layer_nodes_plus_bias = hidden_layer_nodes + BIAS
+        BIAS_NODE = 1
+        hidden_layer_nodes = self.hidden_layers[1] - BIAS_NODE
 
-        weights_between_in_and_hid = (input_layer_nodes_plus_bias, hidden_layer_nodes)
-        weights_between_hid_and_hid = (hidden_layer_nodes_plus_bias, hidden_layer_nodes)
-        weights_between_hid_and_out = (hidden_layer_nodes_plus_bias, self.output_layer_size)
+        weights_between_in_and_hid = (self.input_layer_size, hidden_layer_nodes)
+        weights_between_hid_and_hid = (self.hidden_layers[1], hidden_layer_nodes)
+        weights_between_hid_and_out = (self.hidden_layers[1], self.output_layer_size)
 
         # TODO: weights = [np.random.normal(size=weights_between_in_and_hid),
         # TODO:            np.random.normal(size=weights_between_hid_and_out)]
@@ -155,7 +128,7 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         model_weights.append(np.ones(weights_between_in_and_hid))
         delta_weights.append(np.empty(weights_between_in_and_hid))
 
-        if hidden_layers_cnt > 1:
+        if self.hidden_layers[0] > 1:
 
             for layer_num in range(self.hidden_layers[1]):
                 model_weights.append(np.ones(weights_between_hid_and_hid))
@@ -248,25 +221,32 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
     def get_layer_outputs(self, pattern, layer):
 
+        node_in_layer = 0
+
         for row in np.transpose(self.weights[layer]):
 
             temp = np.multiply(pattern, row)
             net = np.sum(temp)
             output = self.calculate_node_activation(net)
+            self.model[layer][node_in_layer] = output
+            node_in_layer += 1
 
         pass
 
-    def create_model(self, input_layer_nodes, hidden_layer_cnt, hidden_layer_nodes, output_layer_nodes):
+    def create_model(self):
 
         model = []
+        BIAS_NODE = 1
+        self.input_layer_size = self.input_layer_size + BIAS_NODE
+        self.hidden_layers[1] = self.hidden_layers[1] + BIAS_NODE
 
         # Add the amount of input layer nodes to model
-        model.append(np.zeros(input_layer_nodes))
+        model.append(np.zeros(self.input_layer_size))
 
         # Add the amount of hidden layers and their nodes to model
-        for layer_num in range(hidden_layer_cnt):
+        for layer_num in range(self.hidden_layers[0]):
 
-            model.append(np.zeros(hidden_layer_nodes))
+            model.append(np.zeros(self.hidden_layers[1]))
 
         # Add the amount of input layer nodes to model
         model.append(np.zeros(output_layer_nodes))
@@ -290,23 +270,27 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
 
 # Testing with Homework Example
-input_layer_nodes = 2
-hidden_layers = [1, 2]
-output_layer_nodes = 1
-mlp = MLPClassifier(input_layer_nodes=input_layer_nodes,
-                    hidden_layers=hidden_layers,
-                    output_layer_nodes=output_layer_nodes)
+# input_layer_nodes = 2
+# hidden_layers = [1, 2]
+# output_layer_nodes = 1
 
-features = [0,1]
-np_features = np.asarray(features)
-classes = [0]
-np_classes = np.asarray(classes)
 
-fit_result = mlp.fit(np_features, np_classes)
+# features = [0,1]
+# np_features = np.asarray(features)
+# classes = [0]
+# np_classes = np.asarray(classes)
+#
+# fit_result = mlp.fit(np_features, np_classes)
 
 # Testing with Debug Data
-# mat = Arff("linsep2nonorigin.arff")
-# data = mat.data[:,0:-1]
-# labels = mat.data[:,-1].reshape(-1,1)
-# MLPClass = MLPClassifier(LR=0.1,momentum=0.5,shuffle=False,deterministic=10)
-# MLPClass.fit(data,labels)
+mat = Arff("backprophw.arff")
+data = mat.data[:,0:-1]
+labels = mat.data[:,-1].reshape(-1,1)
+input_layer_nodes = len(data[0])
+hidden_layers = [1, input_layer_nodes]
+output_layer_nodes = len(labels[0])
+MLPClass = MLPClassifier(input_layer_nodes=input_layer_nodes,
+                    hidden_layers=hidden_layers,
+                    output_layer_nodes=output_layer_nodes)
+# MLPClass = MLPClassifier(lr=0.1,momentum=0.5,shuffle=False,deterministic=10)
+MLPClass.fit(data,labels)
