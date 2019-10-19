@@ -42,7 +42,6 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         self.output_layer_size = output_layer_nodes
         self.model = self.create_model()
 
-
     def fit(self, X, y, initial_weights=None):
         """ Fit the data; run the algorithm and adjust the weights to find a good solution
 
@@ -70,8 +69,13 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
             # GOING BACKWARDS: BACK-PROPAGATION OF ERROR
             target = y[observation]
-            self.propagate_error_backwards(target,layers_in_model)
+            self.propagate_error_backwards(target)
+
+            # Add delta weights to current weights
+            for layer in range(len(self.weights)):
+                self.weights[layer] = np.add(self.weights[layer], self.deltaWeights[layer])
             print()
+
 
         # pattern = np.append(outputs, bias_node)
         # outputs.append(self.get_layer_outputs(pattern, layer))
@@ -248,14 +252,14 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
         return model
 
-    def going_forward(self, layers_in_model, X, observation, last_hidden_layer ):
+    def going_forward(self, layers_in_model, X, observation, last_hidden_layer):
         for layer in range(layers_in_model):
 
             bias_node = [1]
             modified_observation = np.append(X[observation], bias_node)
 
             if layer != last_hidden_layer:
-                self.model[layer] = np.add(modified_observation, self.model[layer])
+                self.model[layer] = modified_observation
 
             if layer > 0:
                 pattern = np.zeros(len(self.model[layer]))
@@ -268,9 +272,9 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
                     is_last_hidden_layer = True
                     self.get_layer_outputs(pattern, previous_layer_num, is_last_hidden_layer)
 
-    def propagate_error_backwards(self, target, layers_in_model):
+    def propagate_error_backwards(self, target):
 
-        delta_weight_layers = len(self.deltaWeights) - 1
+        delta_weight_layer = len(self.deltaWeights) - 1
         is_output_layer = True
         last_layer_error = []
         for layer in reversed(self.model):
@@ -279,33 +283,40 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
                 for node_value in layer:
                     current_error = self.calculate_delta(target, node_value)
-                    errors.append(current_error)
-                is_output_layer = False
-            elif delta_weight_layers > -1:
+                    errors.append(current_error[0])
+
+
+
+            elif delta_weight_layer > -1:
                 layer_nodes_without_bias = len(layer) - 1
                 for node_num in range(layer_nodes_without_bias):
 
                     errors_and_wights_sum = 0
                     for error_num in range(len(last_layer_error)):
-                        weight_layer = delta_weight_layers + 1
+                        weight_layer = delta_weight_layer + 1
                         weight = self.weights[weight_layer][error_num][0]
-                        errors_and_wights_sum += last_layer_error[error_num][0] * weight
+                        errors_and_wights_sum += last_layer_error[error_num] * weight
                     curr_val = layer[node_num]
                     new_error = curr_val * (1 - curr_val) * (errors_and_wights_sum)
                     errors.append(new_error)
 
-            for delta_weight_layer in range(delta_weight_layers,-1,-1):
 
-                for delta in errors:
-                    delta_weight_num = 0
-                    for node_value in self.model[delta_weight_layer]:
-                        delta_weight_value = self.lr * delta * node_value
-                        self.deltaWeights[delta_weight_layer][delta_weight_num] = delta_weight_value
-                        delta_weight_num += 1
-                        # print(delta)
+            # for delta_weight_layer in range(delta_weight_layers, -1, -1):
 
+            for delta_num in range(len(errors)):
+                node_num = 0
+                for node_value in self.model[delta_weight_layer]:
+                    delta_weight_value = self.lr * errors[delta_num] * node_value
+                    if not is_output_layer:
+                        self.deltaWeights[delta_weight_layer][node_num][delta_num] = delta_weight_value
+                    else:
+                        self.deltaWeights[delta_weight_layer][node_num] = delta_weight_value
+
+                    node_num += 1
+                # print(delta)
+            is_output_layer = False
             last_layer_error = errors
-            delta_weight_layers -= 1
+            delta_weight_layer -= 1
 
     def calculate_delta(self, target, node_value):
 
