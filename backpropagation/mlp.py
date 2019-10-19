@@ -56,29 +56,36 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         """
         self.initial_weights = self.initialize_weights() if not initial_weights else initial_weights
         self.weights = self.initial_weights
+        self.targets = y
+        self.features = X
+
         layers_in_model = len(self.model)
         last_hidden_layer = layers_in_model - 1
-
-        # self.features = X
-        # self.targets = y
         observations = len(X)
-        for observation in range(observations):
+        epoch = 0
 
-            # MLP GOING FORWARDS
-            self.going_forward(layers_in_model, X, observation, last_hidden_layer)
+        while epoch < self.deterministic:
 
-            # GOING BACKWARDS: BACK-PROPAGATION OF ERROR
-            target = y[observation]
-            self.propagate_error_backwards(target)
+            for observation in range(observations):
 
-            # Add delta weights to current weights
-            for layer in range(len(self.weights)):
-                self.weights[layer] = np.add(self.weights[layer], self.deltaWeights[layer])
-            print()
+                # Forward Propagation
+                self.propagate_forward(layers_in_model, X, observation, last_hidden_layer)
+
+                # GOING BACKWARDS: BACK-PROPAGATION OF ERROR
+                target = y[observation]
+                self.propagate_error_backwards(target)
+
+                # Add delta weights to current weights. ("on-line/stochastic weight update")
+                for layer in range(len(self.weights)):
+                    self.weights[layer] = np.add(self.weights[layer], self.deltaWeights[layer])
+                print(self.get_weights())
+
+            # shuffle training set at each epoch
+            if self.shuffle == True:
+                self._shuffle_data(self.features, self.targets)
 
 
-        # pattern = np.append(outputs, bias_node)
-        # outputs.append(self.get_layer_outputs(pattern, layer))
+            epoch += 1
 
         return self
 
@@ -93,14 +100,12 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
                 Predicted target values per element in X.
         """
         predicted_targets = np.zeros(len(X))
-        bias = np.ones(1)
-        index = 0
-        for row in X:
-            pattern = np.append(row, bias)
-            output = self.get_layer_outputs(pattern, index)
-
-            predicted_targets[index] = output
-            index += 1
+        layers_in_model = len(self.model)
+        output_layer = layers_in_model - 1
+        for observation_num in range(len(X)):
+            self.propagate_forward(layers_in_model, X, observation_num, output_layer)
+            output = self.model[output_layer]
+            predicted_targets[observation_num] = output
 
         return predicted_targets
 
@@ -119,21 +124,22 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         weights_between_hid_and_hid = (self.hidden_layers[1], hidden_layer_nodes)
         weights_between_hid_and_out = (self.hidden_layers[1], self.output_layer_size)
 
-        # TODO: weights = [np.random.normal(size=weights_between_in_and_hid),
-        # TODO:            np.random.normal(size=weights_between_hid_and_out)]
-
+        # random weight initialization (small random weights with 0 mean)
         model_weights.append(np.ones(weights_between_in_and_hid))
+        # model_weights.append(np.random.normal(size=weights_between_in_and_hid))
         delta_weights.append(np.empty(weights_between_in_and_hid))
 
         if self.hidden_layers[0] > 1:
 
             for layer_num in range(self.hidden_layers[1]):
                 model_weights.append(np.ones(weights_between_hid_and_hid))
+                # model_weights.append(np.random.normal(size=weights_between_hid_and_hid))
                 delta_weights.append(np.empty(weights_between_hid_and_hid))
         else:
             print("There is only 1 hidden layer in the model!")
 
         model_weights.append(np.ones(weights_between_hid_and_out))
+        # model_weights.append(np.random.normal(size=weights_between_hid_and_out))
         delta_weights.append(np.empty(weights_between_hid_and_out))
 
         self.deltaWeights = delta_weights
@@ -216,10 +222,12 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
         return new_weights
 
-    def get_layer_outputs(self, pattern, previous_layer, is_last_hidden_layer = False):
+    def get_layer_outputs(self, pattern, previous_layer, is_output_layer = False):
 
         BIAS_NODE = 1
-        if not is_last_hidden_layer:
+        current_layer = previous_layer + 1
+
+        if not is_output_layer:
             nodes_in_layer = self.hidden_layers[1] - BIAS_NODE
         else:
             nodes_in_layer = self.output_layer_size
@@ -229,7 +237,6 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
             temp = np.multiply(pattern, layer_weights[node_num])
             net = np.sum(temp)
             output = self.calculate_node_activation(net)
-            current_layer = previous_layer + 1
             self.model[current_layer][node_num] = output
 
     def create_model(self):
@@ -243,8 +250,8 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
         model.append(np.zeros(self.input_layer_size))
 
         # Add the amount of hidden layers and their nodes to model
+        # "ability to create a network structure with at least one hidden layer and an arbitrary number of nodes"
         for layer_num in range(self.hidden_layers[0]):
-
             model.append(np.zeros(self.hidden_layers[1]))
 
         # Add the amount of input layer nodes to model
@@ -252,25 +259,29 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
         return model
 
-    def going_forward(self, layers_in_model, X, observation, last_hidden_layer):
+    def propagate_forward(self, layers_in_model, X, observation, output_layer):
+        ONE_LAYER = 1
+        INPUT_LAYER = 0
+
         for layer in range(layers_in_model):
 
             bias_node = [1]
             modified_observation = np.append(X[observation], bias_node)
 
-            if layer != last_hidden_layer:
+            if layer != output_layer:
                 self.model[layer] = modified_observation
 
-            if layer > 0:
+            if layer > INPUT_LAYER:
                 pattern = np.zeros(len(self.model[layer]))
-                previous_layer_num = layer - 1
+                previous_layer_num = layer - ONE_LAYER
                 previous_layer = self.model[previous_layer_num]
                 pattern = np.add(pattern, previous_layer)
-                if layer != last_hidden_layer:
+                if layer != output_layer:
                     self.get_layer_outputs(pattern, previous_layer_num)
                 else:
-                    is_last_hidden_layer = True
-                    self.get_layer_outputs(pattern, previous_layer_num, is_last_hidden_layer)
+                    is_output_layer = True
+                    self.get_layer_outputs(pattern, previous_layer_num, is_output_layer)
+                    self.calculate_output_activation(output_layer)
 
     def propagate_error_backwards(self, target):
 
@@ -284,8 +295,6 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
                 for node_value in layer:
                     current_error = self.calculate_delta(target, node_value)
                     errors.append(current_error[0])
-
-
 
             elif delta_weight_layer > -1:
                 layer_nodes_without_bias = len(layer) - 1
@@ -302,18 +311,20 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
 
             # for delta_weight_layer in range(delta_weight_layers, -1, -1):
-
             for delta_num in range(len(errors)):
                 node_num = 0
                 for node_value in self.model[delta_weight_layer]:
                     delta_weight_value = self.lr * errors[delta_num] * node_value
+                    # an option to include a momentum term
                     if not is_output_layer:
-                        self.deltaWeights[delta_weight_layer][node_num][delta_num] = delta_weight_value
+                        last_delta_weight = self.deltaWeights[delta_weight_layer][node_num][delta_num]
+                        self.deltaWeights[delta_weight_layer][node_num][delta_num] = delta_weight_value + self.momentum * last_delta_weight
                     else:
-                        self.deltaWeights[delta_weight_layer][node_num] = delta_weight_value
+                        last_delta_weight = self.deltaWeights[delta_weight_layer][node_num]
+                        self.deltaWeights[delta_weight_layer][node_num] = delta_weight_value + self.momentum * last_delta_weight
 
                     node_num += 1
-                # print(delta)
+
             is_output_layer = False
             last_layer_error = errors
             delta_weight_layer -= 1
@@ -322,6 +333,26 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
         return (target - node_value) * self.calculate_activation_derivative(node_value)
 
+    def calculate_output_activation(self, output_layer):
+        FIRST_NODE = 0
+        ONE_NODE = 1
+        ACTIVATE = 1
+        DONT_ACTIVATE = 0
+        output_layer_nodes = self.model[output_layer]
+
+        # Assuming that Output layer nodes >= 1
+        if len(output_layer_nodes) == ONE_NODE:
+            if output_layer_nodes[FIRST_NODE] > DONT_ACTIVATE:
+                output_layer_nodes[FIRST_NODE] = ACTIVATE
+            else:
+                output_layer_nodes[FIRST_NODE] = DONT_ACTIVATE
+        else:
+            largest_output = max(output_layer_nodes)
+            for node_index in range(len(output_layer_nodes)):
+                if output_layer_nodes[node_index] == largest_output:
+                    output_layer_nodes[node_index] = ACTIVATE
+                else:
+                    output_layer_nodes[node_index] = DONT_ACTIVATE
 
     # def splitData(self, X, y):
     #
@@ -337,19 +368,6 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
     #     return training_set, test_set, training_labels, test_labels
 
 
-# Testing with Homework Example
-# input_layer_nodes = 2
-# hidden_layers = [1, 2]
-# output_layer_nodes = 1
-
-
-# features = [0,1]
-# np_features = np.asarray(features)
-# classes = [0]
-# np_classes = np.asarray(classes)
-#
-# fit_result = mlp.fit(np_features, np_classes)
-
 # Testing with Debug Data
 mat = Arff("backprophw.arff")
 data = mat.data[:,0:-1]
@@ -360,6 +378,6 @@ output_layer_nodes = len(labels[0])
 MLPClass = MLPClassifier(input_layer_nodes=input_layer_nodes,
                     hidden_layers=hidden_layers,
                     output_layer_nodes=output_layer_nodes,
-                    lr=1)
+                    lr=1, deterministic=1)
 # MLPClass = MLPClassifier(lr=0.1,momentum=0.5,shuffle=False,deterministic=10)
-MLPClass.fit(data,labels)
+MLPClass.fit(data,labels).predict(data)
