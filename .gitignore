@@ -4,6 +4,7 @@
 *.lnk*
 *.slurm
 ~archive/
+*.arff
 
 # results
 results/

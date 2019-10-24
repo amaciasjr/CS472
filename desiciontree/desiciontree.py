@@ -1,14 +1,15 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
+from arff import Arff
 
 ### NOTE: The only methods you are required to have are:
 #   * predict
 #   * fit
 #   * score
 
-class DTClassifier(BaseEstimator,ClassifierMixin)::
+class DTClassifier(BaseEstimator,ClassifierMixin):
 
-    def __init__(self):
+    def __init__(self, counts):
         """ Initialize class with chosen hyperparameters.
 
         Args:
@@ -19,6 +20,7 @@ class DTClassifier(BaseEstimator,ClassifierMixin)::
         Example:
             DT  = DTClassifier()
         """
+        self.counts = counts
 
     def fit(self, X, y):
         """ Fit the data; Make the Desicion tree
@@ -31,6 +33,9 @@ class DTClassifier(BaseEstimator,ClassifierMixin)::
             self: this allows this to be chained, e.g. model.fit(X,y).predict(X_test)
 
         """
+        features = X
+        classes = y
+
 
         return self
 
@@ -56,3 +61,37 @@ class DTClassifier(BaseEstimator,ClassifierMixin)::
         """
         return 0
 
+    def _calc_entropy(self, p):
+        if p != 0:
+            return -p * np.log2(p)
+        else:
+            return 0
+
+
+if __name__ == '__main__':
+
+    # Debug Arff Paths
+    arff_path = r"../data/decisiontree/debug/lenses.arff"
+    arff_path2 = r"../data/decisiontree/debug/all_lenses.arff"
+
+    # Evaluation Arff Paths
+    # arff_path = r"../data/decisiontree/evaluation/zoo.arff"
+    # arff_path2 = r"../data/decisiontree/evaluation/all_zoo.arff"
+
+    mat = Arff(arff_path)
+
+    counts = []  ## this is so you know how many types for each column
+
+    for i in range(mat.data.shape[1]):
+        counts += [mat.unique_value_count(i)]
+    data = mat.data[:, 0:-1]
+    labels = mat.data[:, -1].reshape(-1, 1)
+    DTClass = DTClassifier(counts)
+    DTClass.fit(data, labels)
+    # mat2 = Arff(arff_path2)
+    # data2 = mat2.data[:, 0:-1]
+    # labels2 = mat2.data[:, -1]
+    # pred = DTClass.predict(data2)
+    # Acc = DTClass.score(data2, labels2)
+    # np.savetxt("pred_lenses.csv", pred, delimiter=",")
+    # print("Accuracy = [{:.2f}]".format(Acc))
