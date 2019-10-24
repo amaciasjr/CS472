@@ -14,7 +14,7 @@ from arff import Arff
 
 class MLPClassifier(BaseEstimator,ClassifierMixin):
 
-    def __init__(self, input_layer_nodes, hidden_layers, output_layer_nodes, lr=.1, momentum=0, shuffle=True, deterministic=np.inf):
+    def __init__(self, input_layer_nodes, hidden_layers, output_layer_nodes, lr=.1, momentum=0.0, shuffle=True, deterministic=np.inf):
         """ Initialize class with chosen hyperparameters.
 
         Args:
@@ -369,15 +369,15 @@ class MLPClassifier(BaseEstimator,ClassifierMixin):
 
 
 # Testing with Debug Data
-mat = Arff("backprophw.arff")
+mat = Arff("linSep2nonorigin.arff")
+ONE_LAYER = 1
 data = mat.data[:,0:-1]
 labels = mat.data[:,-1].reshape(-1,1)
 input_layer_nodes = len(data[0])
-hidden_layers = [1, input_layer_nodes]
+hidden_layer_nodes = input_layer_nodes * 2
+hidden_layers = [ONE_LAYER, hidden_layer_nodes]
 output_layer_nodes = len(labels[0])
-MLPClass = MLPClassifier(input_layer_nodes=input_layer_nodes,
-                    hidden_layers=hidden_layers,
-                    output_layer_nodes=output_layer_nodes,
-                    lr=1, deterministic=1)
-# MLPClass = MLPClassifier(lr=0.1,momentum=0.5,shuffle=False,deterministic=10)
+#MLPClass = MLPClassifier(input_layer_nodes=input_layer_nodes,hidden_layers=hidden_layers,output_layer_nodes=output_layer_nodes,lr=1, deterministic=1)
+MLPClass = MLPClassifier(input_layer_nodes= input_layer_nodes, hidden_layers=hidden_layers,
+                         output_layer_nodes=output_layer_nodes, lr=0.1, momentum=0.5, shuffle=False, deterministic=10)
 MLPClass.fit(data,labels).predict(data)
