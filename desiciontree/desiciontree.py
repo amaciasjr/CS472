@@ -1,15 +1,19 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from arff import Arff
+from tree import Tree
 
 ### NOTE: The only methods you are required to have are:
 #   * predict
 #   * fit
 #   * score
 
-class DTClassifier(BaseEstimator,ClassifierMixin):
+class DTClassifier(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, counts):
+
+    def __init__(self, counts, validation_size = 0.0):
+
+
         """ Initialize class with chosen hyperparameters.
 
         Args:
@@ -21,6 +25,8 @@ class DTClassifier(BaseEstimator,ClassifierMixin):
             DT  = DTClassifier()
         """
         self.counts = counts
+        self.validation_size = validation_size
+
 
     def fit(self, X, y):
         """ Fit the data; Make the Desicion tree
@@ -33,9 +39,27 @@ class DTClassifier(BaseEstimator,ClassifierMixin):
             self: this allows this to be chained, e.g. model.fit(X,y).predict(X_test)
 
         """
-        features = X
-        classes = y
+        data_set = np.concatenate((X, y), axis=1)
 
+        best_feature = 0
+        entropies = []
+
+        class_col = np.shape(data_set)[1] - 1
+        for feature in range(np.shape(data_set)[1] - np.shape(y)[1]):
+            feature_info = {}
+            for observation in range(np.shape(data_set)[0]):
+                observation_val = data_set[observation][feature]
+                class_val = data_set[observation][class_col]
+                if observation_val in feature_info:
+                    if class_val in feature_info[observation_val]:
+                        feature_info[observation_val][class_val] = feature_info[observation_val][class_val] + 1
+                    else:
+                        feature_info[observation_val][class_val] = 1
+                else:
+                    feature_info[observation_val] = {class_val: 1}
+
+                # print(f"Feature: {feature}, Observation_value: {data_set[observation][feature]}, Class_value: {data_set[observation][class_col]}")
+            print(f"Feature {feature} Info: {feature_info}")
 
         return self
 
@@ -86,6 +110,16 @@ if __name__ == '__main__':
         counts += [mat.unique_value_count(i)]
     data = mat.data[:, 0:-1]
     labels = mat.data[:, -1].reshape(-1, 1)
+    data_shape = np.shape(data)
+    labels_shape = np.shape(labels)
+    data_set_cols = data_shape[1] + labels_shape[1]
+    data_set_rows = 0
+
+    if data_shape[0] == labels_shape[0]:
+        data_set_rows = data_shape[0]
+    else:
+        print(f"Rows not the same size.\nRows in data: {data_shape[0]}\nRows in labels: {labels_shape[0]}")
+    data_set_size = (data_set_rows, data_set_cols)
     DTClass = DTClassifier(counts)
     DTClass.fit(data, labels)
     # mat2 = Arff(arff_path2)
