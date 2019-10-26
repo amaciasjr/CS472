@@ -3,6 +3,7 @@ from math import log2
 from sklearn.base import BaseEstimator, ClassifierMixin
 from arff import Arff
 from tree import Tree
+from tree import Node
 
 ### NOTE: The only methods you are required to have are:
 #   * predict
@@ -70,6 +71,11 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
         min_entropy = min(entropies)
         best_feature = entropies.index(min_entropy)
         print(best_feature)
+
+        # Now that the 'Root node' info is known, start making tree.
+        root_node = Node()
+        decision_tree = Tree()
+
         return self
 
     def predict(self, X):
