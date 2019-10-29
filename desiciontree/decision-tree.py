@@ -1,6 +1,6 @@
 import numpy as np
-from math import log2
 from sklearn.base import BaseEstimator, ClassifierMixin
+from functools import reduce
 from arff import Arff
 from tree import Tree
 from tree import Node
@@ -82,19 +82,30 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
             X (array-like): A 2D numpy array with data, excluding targets
             y (array-li    def _shuffle_data(self, X, y):
         """
-        return 0
+
+        predictions = self.predict(X)
+        correct_values = 0
+        total_values = len(y)
+        if len(predictions) == total_values:
+            for index in range(total_values):
+                if predictions[index] == y[index]:
+                    correct_values += 1
+
+        accuracy = correct_values/total_values
+
+        return accuracy
 
 
 
 if __name__ == '__main__':
 
     # Debug Arff Paths
-    arff_path = r"../data/decisiontree/debug/lenses.arff"
-    arff_path2 = r"../data/decisiontree/debug/all_lenses.arff"
+    # arff_path = r"../data/decisiontree/debug/lenses.arff"
+    # arff_path2 = r"../data/decisiontree/debug/all_lenses.arff"
 
     # Evaluation Arff Paths
-    # arff_path = r"../data/decisiontree/evaluation/zoo.arff"
-    # arff_path2 = r"../data/decisiontree/evaluation/all_zoo.arff"
+    arff_path = r"../data/decisiontree/evaluation/zoo.arff"
+    arff_path2 = r"../data/decisiontree/evaluation/all_zoo.arff"
 
     mat = Arff(arff_path)
 
@@ -120,6 +131,7 @@ if __name__ == '__main__':
     data2 = mat2.data[:, 0:-1]
     labels2 = mat2.data[:, -1]
     pred = DTClass.predict(data2)
-    # Acc = DTClass.score(data2, labels2)
-    # np.savetxt("pred_lenses.csv", pred, delimiter=",")
-    # print("Accuracy = [{:.2f}]".format(Acc))
+    np.savetxt("pred_zoo.csv", pred, delimiter=",")
+    Acc = DTClass.score(data2, labels2)
+    print("Accuracy = [{:.2f}]".format(Acc))
+

@@ -1,6 +1,7 @@
 import numpy as np
 from math import log2
 
+
 class Tree:
     def __init__(self, root_node):
         self.root = root_node
@@ -115,7 +116,7 @@ class Node:
         if child_node_to_check.output_value_set:
             final_output = child_node_to_check.output
         else:
-            modified_row = np.delete(row, value_to_check)
+            modified_row = np.delete(row, self.best_feature)
             final_output = child_node_to_check.check_children_outputs(modified_row)
 
         return final_output
