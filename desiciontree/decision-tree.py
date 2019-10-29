@@ -65,10 +65,14 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
                 Predicted target values per element in X.
         """
 
-        for row in X:
-            print(row)
+        predictions = []
+        root_node = self.tree.root
 
-        pass
+        for row in X:
+            prediction = root_node.check_children_outputs(row)
+            predictions += [prediction]
+
+        return predictions
 
 
     def score(self, X, y):
@@ -112,10 +116,10 @@ if __name__ == '__main__':
     data_set_size = (data_set_rows, data_set_cols)
     DTClass = DTClassifier(counts)
     DTClass.fit(data, labels)
-    # mat2 = Arff(arff_path2)
-    # data2 = mat2.data[:, 0:-1]
-    # labels2 = mat2.data[:, -1]
-    # pred = DTClass.predict(data2)
+    mat2 = Arff(arff_path2)
+    data2 = mat2.data[:, 0:-1]
+    labels2 = mat2.data[:, -1]
+    pred = DTClass.predict(data2)
     # Acc = DTClass.score(data2, labels2)
     # np.savetxt("pred_lenses.csv", pred, delimiter=",")
     # print("Accuracy = [{:.2f}]".format(Acc))
