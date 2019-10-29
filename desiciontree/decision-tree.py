@@ -28,6 +28,7 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
         """
         self.counts = counts
         self.validation_size = validation_size
+        self.tree = None
 
 
     def fit(self, X, y):
@@ -43,39 +44,14 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
         """
         data_set = np.concatenate((X, y), axis=1)
 
-        best_feature = 0
-        entropies = []
-
-        class_col = np.shape(data_set)[1] - 1
-        for feature in range(np.shape(data_set)[1] - np.shape(y)[1]):
-
-            feature_info = {}
-            total_observations = np.shape(data_set)[0]
-            for observation in range(total_observations):
-                observation_val = data_set[observation][feature]
-                class_val = data_set[observation][class_col]
-                if observation_val in feature_info:
-                    feature_info[observation_val]['total'] = feature_info[observation_val]['total'] + 1
-                    if class_val in feature_info[observation_val]:
-                        feature_info[observation_val][class_val] = feature_info[observation_val][class_val] + 1.0
-                    else:
-                        feature_info[observation_val][class_val] = 1.0
-                else:
-                    feature_info[observation_val] = {class_val: 1.0, 'total' : 1}
-
-            entropy_sum = 0
-            for category in feature_info:
-                entropy_sum = entropy_sum + self._calc_entropy(total_observations, feature_info[category])
-
-            entropies.append(entropy_sum)
-        min_entropy = min(entropies)
-        best_feature = entropies.index(min_entropy)
-        print(best_feature)
-
         # Now that the 'Root node' info is known, start making tree.
-        root_node = Node()
-        decision_tree = Tree()
-
+        root_node = Node(data_set, self.counts)
+        root_node.set_best_feature(y)
+        root_node.create_children_data_sets()
+        decision_tree = Tree(root_node)
+        decision_tree.build_tree(root_node)
+        self.tree = decision_tree
+        decision_tree.print_tree(root_node)
         return self
 
     def predict(self, X):
@@ -88,6 +64,10 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
             array, shape (n_samples,)
                 Predicted target values per element in X.
         """
+
+        for row in X:
+            print(row)
+
         pass
 
 
@@ -100,25 +80,6 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
         """
         return 0
 
-    # Helper Functions
-    def _calc_entropy(self, all_obs, category_info):
-        category_entropy_sum = 0
-        category_total_obs = category_info['total']
-        del category_info['total']
-
-        for type in category_info:
-            type_obs = category_info[type]
-            probability = type_obs / category_total_obs
-            category_entropy_sum = category_entropy_sum + (category_total_obs / all_obs) * (-(probability)*(log2(probability)))
-
-        return category_entropy_sum
-
-
-    # def _calc_entropy(self, p):
-    #     if p != 0:
-    #         return -p * np.log2(p)
-    #     else:
-    #         return 0
 
 
 if __name__ == '__main__':
