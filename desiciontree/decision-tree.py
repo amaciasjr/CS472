@@ -115,23 +115,12 @@ if __name__ == '__main__':
         counts += [mat.unique_value_count(i)]
     data = mat.data[:, 0:-1]
     labels = mat.data[:, -1].reshape(-1, 1)
-    data_shape = np.shape(data)
-    labels_shape = np.shape(labels)
-    data_set_cols = data_shape[1] + labels_shape[1]
-    data_set_rows = 0
-
-    if data_shape[0] == labels_shape[0]:
-        data_set_rows = data_shape[0]
-    else:
-        print(f"Rows not the same size.\nRows in data: {data_shape[0]}\nRows in labels: {labels_shape[0]}")
-    data_set_size = (data_set_rows, data_set_cols)
     DTClass = DTClassifier(counts)
     DTClass.fit(data, labels)
     mat2 = Arff(arff_path2)
     data2 = mat2.data[:, 0:-1]
     labels2 = mat2.data[:, -1]
     pred = DTClass.predict(data2)
-    np.savetxt("pred_zoo.csv", pred, delimiter=",")
     Acc = DTClass.score(data2, labels2)
+    np.savetxt("pred_zoo.csv", pred, delimiter=",")
     print("Accuracy = [{:.2f}]".format(Acc))
-
