@@ -1,5 +1,6 @@
 import numpy as np
 from math import log2
+from scipy import stats
 
 
 class Tree:
@@ -12,16 +13,17 @@ class Tree:
         ONE_OUTPUT = 1
 
         for child in node.children:
-            unique_outputs = set(child.data_set[:,-1])
-            if ONE_OUTPUT == len(unique_outputs):
-                output = unique_outputs.pop()
-                child.output = output
-                child.output_value_set = True
-            else:
-                new_labels = np.asarray(child.data_set[:,-1])
-                child.set_best_feature(new_labels.reshape((len(new_labels),1)))
-                child.create_children_data_sets()
-                self.build_tree(child)
+            if np.shape(child.data_set)[1] != 0:
+                unique_outputs = set(child.data_set[:,-1])
+                if ONE_OUTPUT == len(unique_outputs):
+                    output = unique_outputs.pop()
+                    child.output = output
+                    child.output_value_set = True
+                else:
+                    new_labels = np.asarray(child.data_set[:,-1])
+                    child.set_best_feature(new_labels.reshape((len(new_labels),1)), node.entropy, node.output)
+                    child.create_children_data_sets()
+                    self.build_tree(child)
 
     # Print the Tree
     def print_tree(self, node):
@@ -42,6 +44,8 @@ class Node:
         self.class_col = np.shape(self.data_set)[1] - 1
         self.ds_total_obs = np.shape(self.data_set)[0]
         self.counts = counts
+        self.entropy = 0
+        self.parent_output = None
         self.output = None
         self.output_value_set = False
 
@@ -49,10 +53,11 @@ class Node:
     def __str__(self):
         return str(f'Node:\nBest Feature -> {self.best_feature}\nChildren -> {self.children}\nData Set -> \n{self.data_set}\n')
 
-    def set_best_feature(self, y):
+    def set_best_feature(self, y, parent_entropy = 0, parent_output = None):
         entropies = []
         test1 = np.shape(self.data_set)[1]
         test2 = np.shape(y)[1]
+        modes = stats.mode(self.data_set)[0]
         for feature in range( test1 - test2 ):
 
             feature_info = {}
@@ -60,6 +65,12 @@ class Node:
             for observation in range(self.ds_total_obs):
                 observation_val = self.data_set[observation][feature]
                 class_val = self.data_set[observation][self.class_col]
+
+                if np.isnan(observation_val):
+                    observation_val = modes[0][feature]
+                    self.data_set[observation][feature] = observation_val
+
+
                 if observation_val in feature_info:
                     feature_info[observation_val]['total'] = feature_info[observation_val]['total'] + 1
                     if class_val in feature_info[observation_val]:
@@ -75,15 +86,26 @@ class Node:
 
             entropies.append(entropy_sum)
 
-        min_entropy = min(entropies)
-        self.best_feature = entropies.index(min_entropy)
+        if len(entropies) != 0:
+            min_entropy = min(entropies)
+            self.best_feature = entropies.index(min_entropy)
+        else:
+            min_entropy = parent_entropy
+            self.parent_output = parent_output
+
+        self.entropy = min_entropy
+
 
     def create_children_data_sets(self):
         COLUMN = 1
         children_data_sets = {}
         for output_type in range(self.counts[self.best_feature]):
 
-            children_data_sets[output_type] = self.data_set[self.data_set[:, self.best_feature] == output_type]
+            temp_data_set = self.data_set[self.data_set[:, self.best_feature] == output_type]
+            if np.shape(temp_data_set)[1] == 0:
+                print("Empty data Set!")
+
+            children_data_sets[output_type] = temp_data_set
             child_data = np.delete(children_data_sets[output_type], self.best_feature, COLUMN)
             child_counts = np.delete(self.counts,self.best_feature)
 
@@ -108,15 +130,20 @@ class Node:
 
         return entropy_sum
 
-    def check_children_outputs(self, row):
+    def check_children_outputs(self, row, modes):
+        if np.shape(row)[0] != 0:
+            if np.isnan(row[self.best_feature]):
+                row[self.best_feature] = modes[self.best_feature]
+            value_to_check = int(row[self.best_feature])
+            child_node_to_check = self.children[value_to_check]
 
-        value_to_check = int(row[self.best_feature])
-        child_node_to_check = self.children[value_to_check]
+            if child_node_to_check.output_value_set:
+                final_output = child_node_to_check.output
+            else:
+                modified_row = np.delete(row, self.best_feature)
+                modified_modes = np.delete(modes, self.best_feature)
+                final_output = child_node_to_check.check_children_outputs(modified_row, modified_modes)
 
-        if child_node_to_check.output_value_set:
-            final_output = child_node_to_check.output
+            return final_output
         else:
-            modified_row = np.delete(row, self.best_feature)
-            final_output = child_node_to_check.check_children_outputs(modified_row)
-
-        return final_output
+            return self.parent_output

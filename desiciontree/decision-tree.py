@@ -1,9 +1,10 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
-from functools import reduce
+from sklearn.model_selection import cross_val_score
 from arff import Arff
 from tree import Tree
 from tree import Node
+from scipy import stats
 
 ### NOTE: The only methods you are required to have are:
 #   * predict
@@ -51,7 +52,6 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
         decision_tree = Tree(root_node)
         decision_tree.build_tree(root_node)
         self.tree = decision_tree
-        decision_tree.print_tree(root_node)
         return self
 
     def predict(self, X):
@@ -67,9 +67,9 @@ class DTClassifier(BaseEstimator, ClassifierMixin):
 
         predictions = []
         root_node = self.tree.root
-
+        modes = stats.mode(X)[0][0]
         for row in X:
-            prediction = root_node.check_children_outputs(row)
+            prediction = root_node.check_children_outputs(row, modes)
             predictions += [prediction]
 
         return predictions
@@ -104,10 +104,14 @@ if __name__ == '__main__':
     # arff_path2 = r"../data/decisiontree/debug/all_lenses.arff"
 
     # Evaluation Arff Paths
-    arff_path = r"../data/decisiontree/evaluation/zoo.arff"
-    arff_path2 = r"../data/decisiontree/evaluation/all_zoo.arff"
+    # arff_path = r"../data/decisiontree/evaluation/zoo.arff"
+    # arff_path2 = r"../data/decisiontree/evaluation/all_zoo.arff"
 
-    mat = Arff(arff_path)
+    # Evaluation Part 2 Arff Paths:
+    arff_path = r"../data/decisiontree/eval-part2/cars.arff"
+    arff_path2 = r"../data/decisiontree/eval-part2/voting.arff"
+
+    mat = Arff(arff_path2)
 
     counts = []  ## this is so you know how many types for each column
 
@@ -117,10 +121,20 @@ if __name__ == '__main__':
     labels = mat.data[:, -1].reshape(-1, 1)
     DTClass = DTClassifier(counts)
     DTClass.fit(data, labels)
-    mat2 = Arff(arff_path2)
-    data2 = mat2.data[:, 0:-1]
-    labels2 = mat2.data[:, -1]
-    pred = DTClass.predict(data2)
-    Acc = DTClass.score(data2, labels2)
-    np.savetxt("pred_zoo.csv", pred, delimiter=",")
+    scores = cross_val_score(DTClass, data, labels, cv=10)
+    pred = DTClass.predict(data)
+    Acc = DTClass.score(data, labels)
     print("Accuracy = [{:.2f}]".format(Acc))
+    print(f"Scores = {scores}")
+
+
+    # mat2 = Arff(arff_path2)
+    # data2 = mat2.data[:, 0:-1]
+    # labels2 = mat2.data[:, -1].reshape(-1, 1)
+    # scores = cross_val_score(DTClass, data2, labels2, cv=10)
+    # pred = DTClass.predict(data2)
+    # Acc = DTClass.score(data2, labels2)
+    # np.savetxt("pred_cars.csv", pred, delimiter=",")
+    # print("Accuracy = [{:.2f}]".format(Acc))
+
+
