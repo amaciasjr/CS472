@@ -91,7 +91,9 @@ class Node:
             self.best_feature = entropies.index(min_entropy)
         else:
             min_entropy = parent_entropy
-            self.parent_output = parent_output
+            self.output = parent_output
+            self.output_value_set = True
+
 
         self.entropy = min_entropy
 

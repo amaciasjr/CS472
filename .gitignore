@@ -5,6 +5,7 @@
 *.slurm
 ~archive/
 *.arff
+*.pdf
 
 # results
 results/

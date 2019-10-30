@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_validate
+from sklearn.model_selection import train_test_split
 from arff import Arff
 from tree import Tree
 from tree import Node
@@ -111,7 +112,7 @@ if __name__ == '__main__':
     arff_path = r"../data/decisiontree/eval-part2/cars.arff"
     arff_path2 = r"../data/decisiontree/eval-part2/voting.arff"
 
-    mat = Arff(arff_path2)
+    mat = Arff(arff_path)
 
     counts = []  ## this is so you know how many types for each column
 
@@ -119,13 +120,15 @@ if __name__ == '__main__':
         counts += [mat.unique_value_count(i)]
     data = mat.data[:, 0:-1]
     labels = mat.data[:, -1].reshape(-1, 1)
+    X_train, X_test, y_train, y_test = train_test_split(
+        data, labels, test_size=0.1)
     DTClass = DTClassifier(counts)
-    DTClass.fit(data, labels)
-    scores = cross_val_score(DTClass, data, labels, cv=10)
-    pred = DTClass.predict(data)
-    Acc = DTClass.score(data, labels)
-    print("Accuracy = [{:.2f}]".format(Acc))
-    print(f"Scores = {scores}")
+    DTClass.fit(X_train, y_train)
+    # pred = DTClass.predict(data)
+    # Acc = DTClass.score(data, labels)
+    # print("Accuracy = [{:.2f}]".format(Acc))
+    scores = cross_validate(DTClass, X_test, y_test, cv=10)
+    print(f"Train Scores = {scores['train_score']}\nTest Scores = {scores['test_score']}")
 
 
     # mat2 = Arff(arff_path2)
