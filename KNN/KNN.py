@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
+from arff import Arff
 
 class KNNClassifier(BaseEstimator,ClassifierMixin):
 
@@ -10,7 +11,7 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
             columntype for each column tells you if continues[real] or if nominal.
             weight_type: inverse_distance voting or if non distance weighting. Options = ["no_weight","inverse_distance"]
         """
-        self.columntype = columntype
+        self.labeltype = labeltype
         self.weight_type = weight_type
 
 
@@ -46,3 +47,22 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
         """
 
         return 0
+
+
+mat = Arff("../data/knn/debug/seismic-bumps_train.arff",label_count=1)
+mat2 = Arff("../data/knn/debug/seismic-bumps_test.arff",label_count=1)
+raw_data = mat.data
+h,w = raw_data.shape
+train_data = raw_data[:,:-1]
+train_labels = raw_data[:,-1]
+
+raw_data2 = mat2.data
+h2,w2 = raw_data2.shape
+test_data = raw_data2[:,:-1]
+test_labels = raw_data2[:,-1]
+
+KNN = KNNClassifier(labeltype ='classification',weight_type='inverse_distance')
+KNN.fit(train_data,train_labels)
+pred = KNN.predict(test_data)
+score = KNN.score(test_data,test_labels)
+np.savetxt("seismic-bump-prediction.csv",pred,delimiter=',',fmt="%i")
