@@ -35,16 +35,14 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
         pass
 
     #Returns the Mean score given input data and labels
-		def score(self, X, y):
-				""" Return accuracy of model on a given dataset. Must implement own score function.
-				Args:
-						X (array-like): A 2D numpy array with data, excluding targets
-						y (array-like): A 2D numpy array with targets
-				Returns:
-						score : float
-								Mean accuracy of self.predict(X) wrt. y.
-				"""
+    def score(self, X, y):
+        """ Return accuracy of model on a given dataset. Must implement own score function.
+        Args:
+                X (array-like): A 2D numpy array with data, excluding targets
+                y (array-like): A 2D numpy array with targets
+        Returns:
+                score : float
+                        Mean accuracy of self.predict(X) wrt. y.
+        """
 
-				return 0
-
-
+        return 0
