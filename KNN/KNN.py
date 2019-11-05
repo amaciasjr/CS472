@@ -1,18 +1,23 @@
 import numpy as np
+from math import sqrt
 from sklearn.base import BaseEstimator, ClassifierMixin
 from arff import Arff
 
 class KNNClassifier(BaseEstimator,ClassifierMixin):
 
 
-    def __init__(self,labeltype=[],weight_type='inverse_distance'): ## add parameters here
+    def __init__(self, column_type='classification', weight_type='inverse_distance', k_neighbors = 3): ## add parameters here
         """
         Args:
             columntype for each column tells you if continues[real] or if nominal.
             weight_type: inverse_distance voting or if non distance weighting. Options = ["no_weight","inverse_distance"]
         """
-        self.labeltype = labeltype
+        self.column_type = column_type
         self.weight_type = weight_type
+        self.neighbors = []
+        self.k_neighbors = k_neighbors
+        self.observations = None
+        self.classes = None
 
 
 
@@ -24,8 +29,14 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
         Returns:
             self: this allows this to be chained, e.g. model.fit(X,y).predict(X_test)
         """
+
+        self.observations = data
+        self.classes = labels
+
         return self
-    def predict(self,data):
+
+
+    def predict(self, data):
         """ Predict all classes for a dataset X
         Args:
             X (array-like): A 2D numpy array with the training data, excluding targets
@@ -33,7 +44,29 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
             array, shape (n_samples,)
                 Predicted target values per element in X.
         """
+
+        predictions = []
+
+        if len(self.observations) < self.k_neighbors:
+            print(f"Data length ({len(data)}) was too small.")
+
+        for row in data:
+            neighbors_info = {}
+
+            for row_index in range(len(self.observations)):
+                distance = self.calcualteEuclideanDistance(self.observations[row_index], row)
+                if len(neighbors_info)  > k_neighbors - 1:
+                    largest_distance = max(neighbors_info.keys())
+                    if distance < largest_distance:
+                        neighbors_info[distance] = self.classes[row_index]
+                        del neighbors_info[largest_distance]
+                else:
+                    neighbors_info[distance] = self.classes[row_index]
+
+            print(f"Neighbors Info: {neighbors_info}")
+
         pass
+
 
     #Returns the Mean score given input data and labels
     def score(self, X, y):
@@ -48,9 +81,20 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
 
         return 0
 
+    # Helper Functions
+    def calcualteEuclideanDistance(self, row1, row2):
+        assert len(row1) == len(row2)
+
+        distance = 0
+        for index in range(len(row2)):
+            distance += (row1[index] + row2[index]) ** 2
+
+        distance = sqrt(distance)
+        return distance
 
 mat = Arff("../data/knn/debug/seismic-bumps_train.arff",label_count=1)
 mat2 = Arff("../data/knn/debug/seismic-bumps_test.arff",label_count=1)
+k_neighbors = 3
 raw_data = mat.data
 h,w = raw_data.shape
 train_data = raw_data[:,:-1]
@@ -61,8 +105,8 @@ h2,w2 = raw_data2.shape
 test_data = raw_data2[:,:-1]
 test_labels = raw_data2[:,-1]
 
-KNN = KNNClassifier(labeltype ='classification',weight_type='inverse_distance')
+KNN = KNNClassifier(column_type='classification', weight_type='inverse_distance', k_neighbors=k_neighbors)
 KNN.fit(train_data,train_labels)
 pred = KNN.predict(test_data)
-score = KNN.score(test_data,test_labels)
-np.savetxt("seismic-bump-prediction.csv",pred,delimiter=',',fmt="%i")
+# score = KNN.score(test_data,test_labels)
+# np.savetxt("seismic-bump-prediction.csv",pred,delimiter=',',fmt="%i")
