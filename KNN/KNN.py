@@ -134,9 +134,18 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
 
                     predictions.append(best_value)
             elif 'regression' == self.label_type:
-                print('In regression!')
                 labels = np.asarray(list(neighbors_info.values()))
-                regression_output_value = np.mean(labels)
+                regression_output_value = 0
+                if 'inverse_distance' == self.weight_type:
+                    distances = np.asarray(list(neighbors_info.keys()))
+                    temp = labels/(distances ** 2)
+                    regression_output_value = np.sum(temp)
+                elif 'no_weight' == self.weight_type:
+                    regression_output_value = np.mean(labels)
+                    predictions.append(regression_output_value)
+                else:
+                    print("Not a valid_weight_type.")
+
                 predictions.append(regression_output_value)
 
         return np.asarray(predictions)
@@ -154,10 +163,7 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
         """
         predictions = self.predict(X)
         total_values = len(y)
-        # if len(predictions) == total_values:
-        #     for index in range(total_values):
-        #         if predictions[index] == y[index]:
-        #             correct_values += 1
+        accuracy = 0
         if 'classification' == self.label_type:
             correct_values = np.where(predictions == y)
             accuracy = correct_values[0].size / total_values
@@ -276,7 +282,7 @@ def part2():
     plt.plot(k_values, scores, label='Accuracy')
     for xy in zip(k_values, scores):  # <--
         ax.annotate('(%s, %.1f)' % xy, xy=xy, textcoords='data')
-    plt.title('Accuracy Using Different K Values')
+    plt.title('Accuracy Using Different K Values and No Distance Weighting')
     plt.xlabel('K Values')
     plt.ylabel('Accuracy (%)')
     plt.legend()
@@ -318,16 +324,104 @@ def part3():
     plt.plot(k_values, mses, label='MSE')
     for xy in zip(k_values, mses):  # <--
         ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
-    plt.title('MSE Using Different K Values')
+    plt.title('MSE Using Different K Value sand No Distance Weighting')
     plt.xlabel('K Values')
     plt.ylabel('MSE')
     plt.legend()
     plt.savefig('k-value-and-mse.png')
     plt.show()
 
+def part4():
+    print('Running Part 4 using housing price data and distance-weighted...')
+    # Part housing price Data sets:
+    mat = Arff("../data/knn/housing-price/hp_training.arff", label_count=1)
+    mat2 = Arff("../data/knn/housing-price/hp_testing.arff", label_count=1)
+
+    raw_data = mat.data
+    h, w = raw_data.shape
+    train_data = raw_data[:, :-1]
+    train_labels = raw_data[:, -1]
+
+    raw_data2 = mat2.data
+    h2, w2 = raw_data2.shape
+    test_data = raw_data2[:, :-1]
+    test_labels = raw_data2[:, -1]
+
+    # Normalize Data.
+    train_data, test_data = normalizeDataSets(train_data, test_data)
+
+    print('Running K Values tests...')
+    k_values = [1, 3, 5, 7, 9, 11, 13, 15]
+    mses = []
+    for k_val in k_values:
+        KNN = KNNClassifier(label_type='regression', weight_type='inverse_distance', k_neighbors=k_val)
+        KNN.fit(train_data, train_labels)
+        score = KNN.score(test_data, test_labels)
+        mses.append(score)
+
+    print('Plotting K values vs MSE Scores...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(k_values, mses, label='MSE')
+    for xy in zip(k_values, mses):  # <--
+        ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
+    plt.title('MSE Using Different K Values and Distance Weighting')
+    plt.xlabel('K Values')
+    plt.ylabel('MSE')
+    plt.legend()
+    plt.savefig('k-value-and-mse-inverse-distance.png')
+    plt.show()
+
+    print()
+
+    print('Running Part 4 using magic telescope data and distance-weighted...')
+    # Part magic telescope Data sets:
+    mat = Arff("../data/knn/magic-telescope/mt_training.arff", label_count=1)
+    mat2 = Arff("../data/knn/magic-telescope/mt_testing.arff", label_count=1)
+
+    raw_data = mat.data
+    h, w = raw_data.shape
+    train_data = raw_data[:, :-1]
+    train_labels = raw_data[:, -1]
+
+    raw_data2 = mat2.data
+    h2, w2 = raw_data2.shape
+    test_data = raw_data2[:, :-1]
+    test_labels = raw_data2[:, -1]
+
+    # Normalize Data.
+    train_data, test_data = normalizeDataSets(train_data, test_data)
+
+    print('Running K Values tests...')
+    k_values = [1, 3, 5, 7, 9, 11, 13, 15]
+    scores = []
+    for k_val in k_values:
+        KNN = KNNClassifier(label_type='classification', weight_type='inverse_distance', k_neighbors=k_val)
+        KNN.fit(train_data, train_labels)
+        score = KNN.score(test_data, test_labels)
+        scores.append(score)
+
+    print('Plotting K values vs Accuracy Scores...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(k_values, scores, label='Accuracy')
+    for xy in zip(k_values, scores):  # <--
+        ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
+    plt.title('Accuracy Using Different K Values and Distance Weighting')
+    plt.xlabel('K Values')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('k-value-and-accuracies-inverse-distance.png')
+    plt.show()
+
+
+
+
+
+
 if __name__ == '__main__':
 
     # part1()
     # part2()
-    part3()
-
+    # part3()
+    part4()
