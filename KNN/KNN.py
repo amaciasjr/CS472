@@ -7,13 +7,13 @@ from arff import Arff
 class KNNClassifier(BaseEstimator,ClassifierMixin):
 
 
-    def __init__(self, column_type='classification', weight_type='inverse_distance', k_neighbors = 3): ## add parameters here
+    def __init__(self, label_type='classification', weight_type='inverse_distance', k_neighbors = 3): ## add parameters here
         """
         Args:
             columntype for each column tells you if continues[real] or if nominal.
             weight_type: inverse_distance voting or if non distance weighting. Options = ["no_weight","inverse_distance"]
         """
-        self.column_type = column_type
+        self.label_type = label_type
         self.weight_type = weight_type
         self.neighbors = []
         self.k_neighbors = k_neighbors
@@ -109,31 +109,37 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
                 temp_labels = np.delete(temp_labels,desired_ind)
                 sqrt_sums = np.delete(sqrt_sums,desired_ind)
 
-            unique_values = set(neighbors_info.values())
-            if len(unique_values) == 1:
-                value = unique_values.pop()
-                predictions.append(value)
-            else:
-                best_value = 0
-                best_value_weight = 0
-                for label in unique_values:
-                    weight = 0
-                    for distance in neighbors_info.keys():
-                        if label == neighbors_info[distance]:
-                            if 'inverse_distance' == self.weight_type:
-                                weight += self.calulateWeightedVote(distance)
-                            elif 'no_weight' == self.weight_type:
-                                weight += 1
-                            else:
-                                print("Not a valid_weight_type.")
+            if 'classification' == self.label_type:
+                unique_values = set(neighbors_info.values())
+                if len(unique_values) == 1:
+                    value = unique_values.pop()
+                    predictions.append(value)
+                else:
+                    best_value = 0
+                    best_value_weight = 0
+                    for label in unique_values:
+                        weight = 0
+                        for distance in neighbors_info.keys():
+                            if label == neighbors_info[distance]:
+                                if 'inverse_distance' == self.weight_type:
+                                    weight += self.calulateWeightedVote(distance)
+                                elif 'no_weight' == self.weight_type:
+                                    weight += 1
+                                else:
+                                    print("Not a valid_weight_type.")
 
-                    if weight > best_value_weight:
-                        best_value_weight = weight
-                        best_value = label
+                        if weight > best_value_weight:
+                            best_value_weight = weight
+                            best_value = label
 
-                predictions.append(best_value)
+                    predictions.append(best_value)
+            elif 'regression' == self.label_type:
+                print('In regression!')
+                labels = np.asarray(list(neighbors_info.values()))
+                regression_output_value = np.mean(labels)
+                predictions.append(regression_output_value)
 
-        return predictions
+        return np.asarray(predictions)
 
 
     #Returns the Mean score given input data and labels
@@ -147,14 +153,18 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
                         Mean accuracy of self.predict(X) wrt. y.
         """
         predictions = self.predict(X)
-        correct_values = 0
         total_values = len(y)
-        if len(predictions) == total_values:
-            for index in range(total_values):
-                if predictions[index] == y[index]:
-                    correct_values += 1
-
-        accuracy = correct_values / total_values
+        # if len(predictions) == total_values:
+        #     for index in range(total_values):
+        #         if predictions[index] == y[index]:
+        #             correct_values += 1
+        if 'classification' == self.label_type:
+            correct_values = np.where(predictions == y)
+            accuracy = correct_values[0].size / total_values
+        elif 'regression' == self.label_type:
+            sse = (y - predictions) ** 2
+            sse_summed = np.sum(sse)
+            accuracy = sse_summed / total_values
 
         return accuracy
 
@@ -208,7 +218,7 @@ def part1():
     test_data = raw_data2[:, :-1]
     test_labels = raw_data2[:, -1]
 
-    KNN = KNNClassifier(column_type='classification', weight_type='inverse_distance',k_neighbors=k_neighbors)
+    KNN = KNNClassifier(label_type='classification', weight_type='inverse_distance', k_neighbors=k_neighbors)
     print("Fitting data ...")
     KNN.fit(train_data, train_labels)
     print("Predict data ...")
@@ -236,7 +246,7 @@ def part2():
     test_data = raw_data2[:, :-1]
     test_labels = raw_data2[:, -1]
 
-    KNN = KNNClassifier(column_type='classification', weight_type='no_weight', k_neighbors=k_neighbors)
+    KNN = KNNClassifier(label_type='classification', weight_type='no_weight', k_neighbors=k_neighbors)
     print("Fitting data ...")
     KNN.fit(train_data, train_labels)
     print("Scoring data ...")
@@ -251,26 +261,73 @@ def part2():
     score = KNN.score(norm_test_data, test_labels)
     print("Accuracy = [{:.2f}]\n".format(score * 100))
 
-    print('Running K Values test...')
+    print('Running K Values tests...')
     k_values = [1, 3, 5, 7, 9, 11, 13, 15]
     scores = []
     for k_val in k_values:
-        KNN = KNNClassifier(column_type='classification', weight_type='no_weight', k_neighbors=k_val)
+        KNN = KNNClassifier(label_type='classification', weight_type='no_weight', k_neighbors=k_val)
         KNN.fit(norm_train_data, train_labels)
         score = KNN.score(norm_test_data, test_labels)
-        scores.append(score)
+        scores.append(score * 100)
 
     print('Plotting K values vs Scores...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     plt.plot(k_values, scores, label='Accuracy')
-    plt.title('Accuracy with Different K Values')
+    for xy in zip(k_values, scores):  # <--
+        ax.annotate('(%s, %.1f)' % xy, xy=xy, textcoords='data')
+    plt.title('Accuracy Using Different K Values')
     plt.xlabel('K Values')
-    plt.ylabel('Accuracy')
+    plt.ylabel('Accuracy (%)')
     plt.legend()
+    plt.savefig('k-value-and-accuracy.png')
     plt.show()
 
+def part3():
+    print('Running Part 3...')
+    # Part 3 Data sets:
+    mat = Arff("../data/knn/housing-price/hp_training.arff", label_count=1)
+    mat2 = Arff("../data/knn/housing-price/hp_testing.arff", label_count=1)
+
+    k_neighbors = 3
+    raw_data = mat.data
+    h, w = raw_data.shape
+    train_data = raw_data[:, :-1]
+    train_labels = raw_data[:, -1]
+
+    raw_data2 = mat2.data
+    h2, w2 = raw_data2.shape
+    test_data = raw_data2[:, :-1]
+    test_labels = raw_data2[:, -1]
+
+    # Normalize Data.
+    train_data, test_data = normalizeDataSets(train_data, test_data)
+
+    print('Running K Values tests...')
+    k_values = [1, 3, 5, 7, 9, 11, 13, 15]
+    mses = []
+    for k_val in k_values:
+        KNN = KNNClassifier(label_type='classification', weight_type='no_weight', k_neighbors=k_val)
+        KNN.fit(train_data, train_labels)
+        score = KNN.score(test_data, test_labels)
+        mses.append(score)
+
+    print('Plotting K values vs MSE Scores...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(k_values, mses, label='MSE')
+    for xy in zip(k_values, mses):  # <--
+        ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
+    plt.title('MSE Using Different K Values')
+    plt.xlabel('K Values')
+    plt.ylabel('MSE')
+    plt.legend()
+    plt.savefig('k-value-and-mse.png')
+    plt.show()
 
 if __name__ == '__main__':
 
     part1()
     part2()
+    # part3()
 
