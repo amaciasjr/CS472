@@ -1,6 +1,6 @@
 import numpy as np
 from math import sqrt
-from collections import Counter
+import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator, ClassifierMixin
 from arff import Arff
 
@@ -19,7 +19,6 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
         self.k_neighbors = k_neighbors
         self.observations = None
         self.labels = None
-
 
 
     def fit(self,data,labels):
@@ -56,7 +55,7 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
 
             for row_index in range(len(self.observations)):
                 distance = self.calcualteEuclideanDistance(self.observations[row_index], row)
-                if len(neighbors_info)  > k_neighbors - 1:
+                if len(neighbors_info)  > self.k_neighbors - 1:
                     largest_distance = max(neighbors_info.keys())
                     if distance < largest_distance:
                         neighbors_info[distance] = self.labels[row_index]
@@ -90,6 +89,7 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
             # print(f"Neighbors Info: {neighbors_info}")
 
         return predictions
+
 
     def predict(self, data):
 
@@ -134,6 +134,7 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
                 predictions.append(best_value)
 
         return predictions
+
 
     #Returns the Mean score given input data and labels
     def score(self, X, y):
@@ -186,24 +187,17 @@ def normalizeDataSets(train_data, test_data):
 
     return train_data, test_data
 
-
-
-
-if __name__ == '__main__':
+def part1():
+    print('Running Part 1...')
     # Debug Data sets:
     # mat = Arff("../data/knn/debug/seismic-bumps_train.arff",label_count=1)
     # mat2 = Arff("../data/knn/debug/seismic-bumps_test.arff",label_count=1)
 
     # Evaluation Data sets:
-    # mat = Arff("../data/knn/evaluation/diabetes.arff",label_count=1)
-    # mat2 = Arff("../data/knn/evaluation/diabetes_test.arff",label_count=1)
-
-    # Evaluation Data sets:
-    mat = Arff("../data/knn/magic-telescope/mt_training.arff", label_count=1)
-    mat2 = Arff("../data/knn/magic-telescope/mt_testing.arff", label_count=1)
+    mat = Arff("../data/knn/evaluation/diabetes.arff",label_count=1)
+    mat2 = Arff("../data/knn/evaluation/diabetes_test.arff",label_count=1)
 
     k_neighbors = 3
-    distance_weighting = True
     raw_data = mat.data
     h, w = raw_data.shape
     train_data = raw_data[:, :-1]
@@ -214,21 +208,69 @@ if __name__ == '__main__':
     test_data = raw_data2[:, :-1]
     test_labels = raw_data2[:, -1]
 
-    KNN = KNNClassifier(column_type='classification', weight_type='no_weight',k_neighbors=k_neighbors)
+    KNN = KNNClassifier(column_type='classification', weight_type='inverse_distance',k_neighbors=k_neighbors)
     print("Fitting data ...")
     KNN.fit(train_data, train_labels)
-    # print("Predict data ...")
-    # pred = KNN.predict(test_data)
+    print("Predict data ...")
+    pred = KNN.predict(test_data)
     print("Scoring data ...")
     score = KNN.score(test_data, test_labels)
-    # np.savetxt("diabetes-prediction.csv",pred, delimiter=',',fmt="%i")
-    print("Accuracy = [{:.2f}]".format(score * 100))
+    np.savetxt("diabetes-prediction.csv",pred, delimiter=',',fmt="%i")
+    print("Accuracy = [{:.2f}]\n".format(score * 100))
 
-    norm_train_data, norm_test_data= normalizeDataSets(train_data,test_data)
+
+def part2():
+    print('Running Part 2...')
+    # Part 2 Data sets:
+    mat = Arff("../data/knn/magic-telescope/mt_training.arff", label_count=1)
+    mat2 = Arff("../data/knn/magic-telescope/mt_testing.arff", label_count=1)
+
+    k_neighbors = 3
+    raw_data = mat.data
+    h, w = raw_data.shape
+    train_data = raw_data[:, :-1]
+    train_labels = raw_data[:, -1]
+
+    raw_data2 = mat2.data
+    h2, w2 = raw_data2.shape
+    test_data = raw_data2[:, :-1]
+    test_labels = raw_data2[:, -1]
+
+    KNN = KNNClassifier(column_type='classification', weight_type='no_weight', k_neighbors=k_neighbors)
+    print("Fitting data ...")
+    KNN.fit(train_data, train_labels)
+    print("Scoring data ...")
+    score = KNN.score(test_data, test_labels)
+    print("Accuracy = [{:.2f}]\n".format(score * 100))
+
+    norm_train_data, norm_test_data = normalizeDataSets(train_data, test_data)
 
     print("Fitting normalized data ...")
-    KNN.fit(train_data, train_labels)
+    KNN.fit(norm_train_data, train_labels)
     print("Scoring normalized data ...")
-    score = KNN.score(test_data, test_labels)
-    # np.savetxt("diabetes-prediction.csv",pred, delimiter=',',fmt="%i")
-    print("Accuracy = [{:.2f}]".format(score * 100))
+    score = KNN.score(norm_test_data, test_labels)
+    print("Accuracy = [{:.2f}]\n".format(score * 100))
+
+    print('Running K Values test...')
+    k_values = [1, 3, 5, 7, 9, 11, 13, 15]
+    scores = []
+    for k_val in k_values:
+        KNN = KNNClassifier(column_type='classification', weight_type='no_weight', k_neighbors=k_val)
+        KNN.fit(norm_train_data, train_labels)
+        score = KNN.score(norm_test_data, test_labels)
+        scores.append(score)
+
+    print('Plotting K values vs Scores...')
+    plt.plot(k_values, scores, label='Accuracy')
+    plt.title('Accuracy with Different K Values')
+    plt.xlabel('K Values')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.show()
+
+
+if __name__ == '__main__':
+
+    part1()
+    part2()
+
