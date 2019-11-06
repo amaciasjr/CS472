@@ -307,7 +307,7 @@ def part3():
     k_values = [1, 3, 5, 7, 9, 11, 13, 15]
     mses = []
     for k_val in k_values:
-        KNN = KNNClassifier(label_type='classification', weight_type='no_weight', k_neighbors=k_val)
+        KNN = KNNClassifier(label_type='regression', weight_type='no_weight', k_neighbors=k_val)
         KNN.fit(train_data, train_labels)
         score = KNN.score(test_data, test_labels)
         mses.append(score)
@@ -327,7 +327,7 @@ def part3():
 
 if __name__ == '__main__':
 
-    part1()
-    part2()
-    # part3()
+    # part1()
+    # part2()
+    part3()
 
