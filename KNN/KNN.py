@@ -2,6 +2,9 @@ import numpy as np
 from math import sqrt
 import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsRegressor
 from arff import Arff
 
 class KNNClassifier(BaseEstimator,ClassifierMixin):
@@ -289,6 +292,7 @@ def part2():
     plt.savefig('k-value-and-accuracy.png')
     plt.show()
 
+
 def part3():
     print('Running Part 3...')
     # Part 3 Data sets:
@@ -330,6 +334,7 @@ def part3():
     plt.legend()
     plt.savefig('k-value-and-mse.png')
     plt.show()
+
 
 def part4():
     print('Running Part 4 using housing price data and distance-weighted...')
@@ -415,8 +420,153 @@ def part4():
     plt.show()
 
 
+def part5():
+    print('Running Part 5 ...')
+    # Part credit approval Data sets:
+    mat = Arff("../data/creditapproval.arff", label_count=1)
+
+    k_val = 3
+    raw_data = mat.data
+    h, w = raw_data.shape
+    data = raw_data[:, :-1]
+    labels = raw_data[:, -1]
+
+    # Split data and labels into test and train sets.
+    X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.33, shuffle=False)
+
+    # Normalize Data.
+    X_train, X_test = normalizeDataSets(X_train, X_test)
+    KNN = KNNClassifier(label_type='classification', weight_type='inverse_distance', k_neighbors=k_val)
+    KNN.fit(X_train, y_train)
+    score = KNN.score(X_test, y_test)
 
 
+def part6():
+    print('Running Part 6 using housing price data...')
+    # Part housing price Data sets:
+    mat = Arff("../data/knn/housing-price/hp_training.arff", label_count=1)
+    mat2 = Arff("../data/knn/housing-price/hp_testing.arff", label_count=1)
+
+    raw_data = mat.data
+    h, w = raw_data.shape
+    train_data = raw_data[:, :-1]
+    train_labels = raw_data[:, -1]
+
+    raw_data2 = mat2.data
+    h2, w2 = raw_data2.shape
+    test_data = raw_data2[:, :-1]
+    test_labels = raw_data2[:, -1]
+    print(test_labels)
+    # Normalize Data.
+    train_data, test_data = normalizeDataSets(train_data, test_data)
+
+    print('Running K Values tests...')
+    k_values = [1, 3, 5, 7, 9, 11, 13, 15]
+    scores1 = []
+    scores2 = []
+    for k_val in k_values:
+        neigh = KNeighborsRegressor(n_neighbors=k_val)
+        neigh.fit(train_data, train_labels)
+        score = neigh.score(test_data, test_labels)
+        scores1.append(score)
+
+        neigh = KNeighborsRegressor(n_neighbors=k_val, weights='distance')
+        neigh.fit(train_data, train_labels)
+        score = neigh.score(test_data, test_labels)
+        scores2.append(score)
+
+    print('Plotting SKlearn 1 with Different K Values and No Weighting...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(k_values, scores1, label='Accuracy')
+    for xy in zip(k_values, scores1):  # <--
+        ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
+    plt.title('SKlearn K Values vs No Weighting Accuracy on Housing Price Data')
+    plt.xlabel('K Values')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('sklearn-knn-graph1.png')
+    plt.show()
+
+    print('Plotting SKlearn 2 with Different K Values and distance Weighting...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(k_values, scores2, label='Accuracy')
+    for xy in zip(k_values, scores2):  # <--
+        ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
+    plt.title('SKlearn K Values vs Distance Weighting Accuracy on Housing Price Data')
+    plt.xlabel('K Values')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('sklearn-knn-graph2.png')
+    plt.show()
+
+    print()
+
+    print('Running Part 6 using magic telescope data...')
+    # Part magic telescope Data sets:
+    mat = Arff("../data/knn/magic-telescope/mt_training.arff", label_count=1)
+    mat2 = Arff("../data/knn/magic-telescope/mt_testing.arff", label_count=1)
+
+    raw_data = mat.data
+    h, w = raw_data.shape
+    train_data = raw_data[:, :-1]
+    train_labels = raw_data[:, -1]
+
+    raw_data2 = mat2.data
+    h2, w2 = raw_data2.shape
+    test_data = raw_data2[:, :-1]
+    test_labels = raw_data2[:, -1]
+
+    # Normalize Data.
+    train_data, test_data = normalizeDataSets(train_data, test_data)
+
+    print('Running K Values tests...')
+    k_values = [1, 3, 5, 7, 9, 11, 13, 15]
+    scores1 = []
+    scores2 = []
+    for k_val in k_values:
+        neigh = KNeighborsClassifier(n_neighbors=k_val)
+        neigh.fit(train_data, train_labels)
+        score = neigh.score(test_data, test_labels)
+        scores1.append(score)
+
+        neigh = KNeighborsClassifier(n_neighbors=k_val, weights='distance')
+        neigh.fit(train_data, train_labels)
+        score = neigh.score(test_data, test_labels)
+        scores2.append(score)
+
+    print('Plotting SKlearn 3 with Different K Values and even Weighting...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(k_values, scores1, label='Accuracy')
+    for xy in zip(k_values, scores1):  # <--
+        ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
+    plt.title('SKlearn K Values and Even Weighting Accuracy on Magic Telescope Data')
+    plt.xlabel('K Values')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('sklearn-knn-graph3.png')
+    plt.show()
+
+    print('Plotting SKlearn 4 with Different K Values and distance Weighting...')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(k_values, scores2, label='Accuracy')
+    for xy in zip(k_values, scores2):  # <--
+        ax.annotate('(%s, %.2f)' % xy, xy=xy, textcoords='data')
+    plt.title('SKlearn K Values and Distance Weighting Accuracy on Magic Telescope Data')
+    plt.xlabel('K Values')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('sklearn-knn-graph4.png')
+    plt.show()
+
+
+def part7():
+    # Wrapper is essentially a functions that got through each feature indivdually and fit/score. Get
+    # best one, until improvement.Keep doing until threshold is hit. See slide 21 of features.
+    return
 
 
 if __name__ == '__main__':
@@ -425,3 +575,5 @@ if __name__ == '__main__':
     # part2()
     # part3()
     part4()
+    # part5()
+    # part6()
