@@ -141,11 +141,10 @@ class KNNClassifier(BaseEstimator,ClassifierMixin):
                 regression_output_value = 0
                 if 'inverse_distance' == self.weight_type:
                     distances = np.asarray(list(neighbors_info.keys()))
-                    temp = labels/(distances ** 2)
-                    regression_output_value = np.sum(temp)
+                    distances_squared = distances ** 2
+                    regression_output_value = np.sum(labels/distances_squared) / np.sum(1/distances_squared)
                 elif 'no_weight' == self.weight_type:
                     regression_output_value = np.mean(labels)
-                    predictions.append(regression_output_value)
                 else:
                     print("Not a valid_weight_type.")
 
@@ -456,7 +455,6 @@ def part6():
     h2, w2 = raw_data2.shape
     test_data = raw_data2[:, :-1]
     test_labels = raw_data2[:, -1]
-    print(test_labels)
     # Normalize Data.
     train_data, test_data = normalizeDataSets(train_data, test_data)
 
@@ -574,6 +572,6 @@ if __name__ == '__main__':
     # part1()
     # part2()
     # part3()
-    part4()
+    # part4()
     # part5()
-    # part6()
+    part6()
