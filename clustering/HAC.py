@@ -3,7 +3,7 @@ from sklearn.base import BaseEstimator, ClusterMixin
 
 class HACClustering(BaseEstimator,ClusterMixin):
 
-    def __init__(self,k=3,link_type='single'): ## add parameters here
+    def __init__(self, k=3, link_type='single'): ## add parameters here
         """
         Args:
             k = how many final clusters to have
@@ -11,7 +11,9 @@ class HACClustering(BaseEstimator,ClusterMixin):
         """
         self.link_type = link_type
         self.k = k
-    def fit(self,X,y=None):
+
+
+    def fit(self, X, y=None):
         """ Fit the data; In this lab this will make the K clusters :D
         Args:
             X (array-like): A 2D numpy array with the training data
@@ -20,7 +22,9 @@ class HACClustering(BaseEstimator,ClusterMixin):
             self: this allows this to be chained, e.g. model.fit(X,y).predict(X_test)
         """
         return self
-    def save_clusters(self,filename):
+
+
+    def save_clusters(self, filename):
         """
             f = open(filename,"w+") 
             Used for grading.
