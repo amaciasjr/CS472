@@ -278,7 +278,7 @@ def part2():
         score = KNN.score(norm_test_data, test_labels)
         scores.append(score * 100)
 
-    print('Plotting K values vs Scores...')
+    print('Plotting K values vs Scores w/ Normalization...')
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plt.plot(k_values, scores, label='Accuracy')
@@ -570,8 +570,8 @@ def part7():
 if __name__ == '__main__':
 
     # part1()
-    # part2()
+    part2()
     # part3()
     # part4()
     # part5()
-    part6()
+    # part6()
