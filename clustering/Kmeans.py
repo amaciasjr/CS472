@@ -30,35 +30,57 @@ class KMEANSClustering(BaseEstimator, ClusterMixin):
             self.centroids = X[:self.k]
         else:
             self.centroids = np.asarray(random.choices(X, k=self.k))
+        iterations = 0
+        centroids_changed = True
+        while centroids_changed:
+            # Go through each instance and see which centroid has the shortest euclidean distance from it.
+            distances = np.zeros((np.shape(X)[0],)).reshape((np.shape(X)[0],1))
+            for centroid in self.centroids:
+                data_copy = X
+                distance = (data_copy - centroid) ** 2
+                dist_sums = np.sum(distance, axis=1)
+                dist_sqrt_sums = np.sqrt(dist_sums).reshape((np.shape(dist_sums)[0],1))
+                distances = np.concatenate((distances,dist_sqrt_sums), axis=1)
+            distances = distances[:,1:]
 
-        # Go through each instance and see which centroid has the shortest euclidean distance from it.
-        distances = np.zeros((np.shape(X)[0],)).reshape((np.shape(X)[0],1))
-        for centroid in self.centroids:
-            data_copy = X
-            distance = (data_copy - centroid) ** 2
-            dist_sums = np.sum(distance, axis=1)
-            dist_sqrt_sums = np.sqrt(dist_sums).reshape((np.shape(dist_sums)[0],1))
-            distances = np.concatenate((distances,dist_sqrt_sums), axis=1)
-        distances = distances[:,1:]
+            # Gather index of points closest to each centroid
+            centroid_groups = dict()
+            for row in range(distances.shape[0]):
+                instance = distances[row]
+                closest_centroid = np.argmin(instance)
+                if closest_centroid in centroid_groups:
+                    centroid_groups[closest_centroid] += [row]
+                else:
+                    centroid_groups[closest_centroid]= []
+                    centroid_groups[closest_centroid].append(row)
 
-        # Gather index of points closest to each centroid
-        centroid_groups = dict()
-        for row in range(distances.shape[0]):
-            instance = distances[row]
-            closest_centroid = np.argmin(instance)
-            if closest_centroid in centroid_groups:
-                centroid_groups[closest_centroid] += [row]
-            else:
-                centroid_groups[closest_centroid]= []
-                centroid_groups[closest_centroid].append(row)
+            counter = 0
+            same_centroids = 0
+            for indexes in centroid_groups.values():
+                # Create clusters around each centroid
+                cluster = X[indexes]
+                # From current clusters, calculate new centroids.
+                new_centroid = np.mean(cluster,axis=0)
 
-        # TODO: Create clusters around each centroid
-        for indicies in centroid_groups.values():
-            pass
+                if not np.array_equal(new_centroid, self.centroids[counter]):
+                    print(f"Updating Centroid {counter}...")
+                    self.centroids[counter] = new_centroid
+                else:
+                    print(f"Centroid {counter} did not change!")
+                    same_centroids += 1
 
-        # TODO: From current clusters, calculate new centroids.
+                counter += 1
+
+            if same_centroids == len(self.centroids):
+                centroids_changed = False
+
+            iterations += 1
 
         return self
+
+
+
+
 
 
     def save_clusters(self, filename):
