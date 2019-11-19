@@ -12,7 +12,9 @@ class KMEANSClustering(BaseEstimator, ClusterMixin):
         """
         self.k = k
         self.debug = debug
-        self.centroids = []
+        self.centroids = None
+        self.cluster_sizes = None
+        self.SSEs = None
 
 
     def fit(self, X, y=None):
@@ -32,11 +34,12 @@ class KMEANSClustering(BaseEstimator, ClusterMixin):
             self.centroids = np.asarray(random.choices(X, k=self.k))
         iterations = 0
         centroids_changed = True
+
         while centroids_changed:
             # Go through each instance and see which centroid has the shortest euclidean distance from it.
-            distances = np.zeros((np.shape(X)[0],)).reshape((np.shape(X)[0],1))
+            distances = np.empty((np.shape(X)[0],)).reshape((np.shape(X)[0],1))
             for centroid in self.centroids:
-                data_copy = X
+                data_copy = np.copy(X)
                 distance = (data_copy - centroid) ** 2
                 dist_sums = np.sum(distance, axis=1)
                 dist_sqrt_sums = np.sqrt(dist_sums).reshape((np.shape(dist_sums)[0],1))
@@ -54,33 +57,36 @@ class KMEANSClustering(BaseEstimator, ClusterMixin):
                     centroid_groups[closest_centroid]= []
                     centroid_groups[closest_centroid].append(row)
 
-            counter = 0
-            same_centroids = 0
-            for indexes in centroid_groups.values():
+            # Generate new centroids.
+            new_centroids = None
+            clusters = []
+            sse_values = []
+            for index in range(len(centroid_groups)):
                 # Create clusters around each centroid
-                cluster = X[indexes]
+                cluster = X[centroid_groups[index]]
+                clusters += [len(cluster)]
                 # From current clusters, calculate new centroids.
-                new_centroid = np.mean(cluster,axis=0)
+                new_centroid = np.mean(cluster, axis=0)
 
-                if not np.array_equal(new_centroid, self.centroids[counter]):
-                    print(f"Updating Centroid {counter}...")
-                    self.centroids[counter] = new_centroid
+                if new_centroids is not None:
+                    new_centroids = np.append(new_centroids, [new_centroid], axis=0)
                 else:
-                    print(f"Centroid {counter} did not change!")
-                    same_centroids += 1
+                    new_centroids = [new_centroid]
 
-                counter += 1
+                curr_sse = self._calculateClusterSSE(cluster,index)
+                sse_values += [curr_sse]
 
-            if same_centroids == len(self.centroids):
+            self.cluster_sizes = clusters
+            self.SSEs = sse_values
+            # See if centroids changed after this iteration.
+            if np.array_equal(new_centroids, self.centroids):
                 centroids_changed = False
+            else:
+                self.centroids = new_centroids
 
             iterations += 1
 
         return self
-
-
-
-
 
 
     def save_clusters(self, filename):
@@ -96,3 +102,27 @@ class KMEANSClustering(BaseEstimator, ClusterMixin):
                 write("{:.4f}\n\n".format(SSE of cluster))
             f.close()
         """
+        assert len(self.centroids) == len(self.cluster_sizes) and len(self.centroids) == len(self.SSEs)
+
+        f = open(filename, "w+")
+        f.write("{:d}\n".format(self.k))
+        f.write("{:.4f}\n\n".format(np.sum(self.SSEs)))
+        # For each cluster and centroid
+
+        for index in range(len(self.centroids)):
+            f.write(np.array2string(self.centroids[index], precision=4, separator=","))
+            f.write("\n")
+            f.write("{:d}\n".format(int(self.cluster_sizes[index])))
+            f.write("{:.4f}\n\n".format(self.SSEs[index]))
+
+        f.close()
+
+    def _calculateClusterSSE(self, cluster, centroid_index):
+        """
+        Used to calculate the SSE of each cluster for the file report.
+        :param cluster:
+        :param centroid_index:
+        :return: (int) sse for cluster.
+        """
+        sse = np.sum((cluster - self.centroids[centroid_index]) ** 2)
+        return sse
