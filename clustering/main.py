@@ -15,13 +15,13 @@ def part1():
     norm_data = scaler.transform(data)
 
     ### KMEANS ###
-    KMEANS = KMEANSClustering(k=5, debug=True)
-    KMEANS.fit(norm_data)
-    KMEANS.save_clusters("debug_kmeans.txt")
+    # KMEANS = KMEANSClustering(k=5, debug=True)
+    # KMEANS.fit(norm_data)
+    # KMEANS.save_clusters("debug_kmeans.txt")
 
     ### HAC SINGLE LINK ###
-    # HAC_single = HACClustering(k=5, link_type='single')
-    # HAC_single.fit(norm_data)
+    HAC_single = HACClustering(k=5, link_type='single')
+    HAC_single.fit(norm_data)
     # HAC_single.save_clusters("debug_hac_single.txt")
 
     ### HAC SINGLE LINK ###
