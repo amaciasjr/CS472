@@ -20,14 +20,14 @@ def part1():
     # KMEANS.save_clusters("debug_kmeans.txt")
 
     ### HAC SINGLE LINK ###
-    HAC_single = HACClustering(k=5, link_type='single')
-    HAC_single.fit(norm_data)
+    # HAC_single = HACClustering(k=5, link_type='single')
+    # HAC_single.fit(norm_data)
     # HAC_single.save_clusters("debug_hac_single.txt")
 
     ### HAC SINGLE LINK ###
-    # HAC_complete = HACClustering(k=5, link_type='complete')
-    # HAC_complete.fit(norm_data)
-    # HAC_complete.save_clusters("debug_hac_complete.txt")
+    HAC_complete = HACClustering(k=5, link_type='complete')
+    HAC_complete.fit(norm_data)
+    HAC_complete.save_clusters("debug_hac_complete.txt")
 
 
 if __name__ == '__main__':
