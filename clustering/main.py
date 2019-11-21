@@ -1,5 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.cluster import AgglomerativeClustering
+import pandas as pd
+from sklearn.metrics import homogeneity_score
 from HAC import HACClustering
 from Kmeans import KMEANSClustering
 from arff import Arff
@@ -266,9 +270,38 @@ def irisDataTestingKmeans5Times():
     testAndPlotKmeansSameK(norm_data)
 
 
+def irisDataTestingSklearnModules():
+    mat = Arff("../data/cluster/iris.arff", label_count=1)
+
+    raw_data = mat.data
+    data = raw_data[:, :(raw_data.shape[1] - 1)]
+    orig_label = raw_data[:,- 1]
+
+    ### Normalize the data ###
+    scaler = MinMaxScaler()
+    scaler.fit(data)
+    norm_data = scaler.transform(data)
+    norm_labels = norm_data[:,- 1]
+
+
+    skKMeans = KMeans(n_clusters=3, random_state=0).fit(norm_data)
+    labels = skKMeans.labels_
+
+    score = homogeneity_score(orig_label, labels)
+    return
+
+
+def creditCardDataTestingSklearn():
+    data_frame = pd.read_csv('CC-GENERAL.csv')
+    data = data_frame._values[:,1:]
+
+    return
+
 if __name__ == '__main__':
     # debugDataTesting()
     # evaluationTesting()
     # irisDataTestingWithoutLabels()
     # irisDataTestingWithLabels()
-    irisDataTestingKmeans5Times()
+    # irisDataTestingKmeans5Times()
+    # irisDataTestingSklearnModules()
+    creditCardDataTestingSklearn()
