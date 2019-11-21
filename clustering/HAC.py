@@ -55,16 +55,12 @@ class HACClustering(BaseEstimator,ClusterMixin):
 
         while len(clusters) > self.k:
 
-            # 1) 'single link' deals with finding min distance between clusters, find index of min distance in matrix.
-            # 2) 'complete link' deals with finding max distance between clusters, find index of max distance in matrix.
-
             value = np.nanmin(matrix)
-
 
             # Get indexes of desired value
             indexes = np.where(matrix == value)
-            row1_to_check = indexes[0][0]
-            row2_to_check = indexes[0][1]
+            row1_to_check = indexes[0][1]
+            row2_to_check = indexes[1][1]
 
             # Get row/col to compare from matrix
             row1 = matrix[row1_to_check]
