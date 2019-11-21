@@ -45,13 +45,8 @@ class HACClustering(BaseEstimator,ClusterMixin):
                     sqrt_dist_ss = np.sqrt(dist_squared_sum)
                     curr_row += [sqrt_dist_ss]
                 else:
-                    if self.link_type == 'single':
-                        curr_row += [np.nan]
-                    elif self.link_type == 'complete':
-                        curr_row += [0]
-                    else:
-                        print("Invalid link type for HAC")
-                        return
+                    curr_row += [np.nan]
+
 
             if matrix is not None:
                 matrix = np.append(matrix, [np.asarray(curr_row)], axis=0)
@@ -62,13 +57,9 @@ class HACClustering(BaseEstimator,ClusterMixin):
 
             # 1) 'single link' deals with finding min distance between clusters, find index of min distance in matrix.
             # 2) 'complete link' deals with finding max distance between clusters, find index of max distance in matrix.
-            if self.link_type == 'single':
-                value = np.nanmin(matrix)
-            elif self.link_type == 'complete':
-                value = np.nanmax(matrix)
-            else:
-                print("Invalid link type for HAC")
-                return
+
+            value = np.nanmin(matrix)
+
 
             # Get indexes of desired value
             indexes = np.where(matrix == value)
